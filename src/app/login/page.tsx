@@ -1,4 +1,4 @@
-// app/register/page.tsx
+// app/login/page.tsx - Add Google login here too
 "use client";
 
 import { useState } from "react";
@@ -14,17 +14,15 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import client from "@/api/client";
+import AuthLayout from "@/components/auth/AuthLayout";
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    fullName: "",
-    companyName: "",
-    companyDescription: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,72 +37,28 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 1. Create user account
-      const { data: authData, error: authError } = await client.auth.signUp({
+      const { error } = await client.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullName,
-          },
-        },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("No user returned");
+      if (error) throw error;
 
-      // 2. Create profile
-      const { error: profileError } = await client.from("profiles").insert({
-        id: authData.user.id,
-        email: formData.email,
-        user_type: "company_admin",
-      });
-
-      if (profileError) throw profileError;
-
-      // 3. Create company
-      const { data: companyData, error: companyError } = await client
-        .from("companies")
-        .insert({
-          name: formData.companyName,
-          description: formData.companyDescription,
-        })
-        .select()
-        .single();
-
-      if (companyError) throw companyError;
-
-      // 4. Link user as company admin
-      const { error: adminError } = await client.from("company_admins").insert({
-        user_id: authData.user.id,
-        company_id: companyData.id,
-        role: "owner",
-      });
-
-      if (adminError) throw adminError;
-
-      alert(
-        "Registration successful! Please check your email to verify your account.",
-      );
-      router.push("/login");
+      router.push("/dashboard");
     } catch (error) {
-      console.error("Registration error:", error);
-      alert(error instanceof Error ? error.message : "Registration failed");
+      console.error("Login error:", error);
+      alert(error instanceof Error ? error.message : "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignUp = async () => {
+  const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     try {
       const { error } = await client.auth.signInWithOAuth({
         provider: "google",
         options: {
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
           redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
@@ -112,34 +66,31 @@ export default function RegisterPage() {
       if (error) throw error;
     } catch (error) {
       console.error("Google OAuth error:", error);
-      alert(
-        "Google sign up failed. Please try again or use email registration.",
-      );
+      alert("Google login failed. Please try again.");
       setGoogleLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+    <AuthLayout>
+      <Card className="w-full max-w-[50%] border-none shadow-none">
+        <CardHeader className="space-y-1 shadow-none">
           <CardTitle className="text-center text-2xl font-bold">
-            Create Company Account
+            Welcome to Muasya ATS
           </CardTitle>
           <CardDescription className="text-center">
-            Register as a company administrator
+            Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {/* Google Sign Up Button */}
+        <CardContent className="shadow-none">
           <Button
             variant="outline"
-            className="mb-6 w-full"
-            onClick={handleGoogleSignUp}
+            className="mb-6 w-full py-6 rounded-full"
+            onClick={handleGoogleLogin}
             disabled={googleLoading}
           >
             <GoogleIcon />
-            {googleLoading ? "Connecting..." : "Sign up with Google"}
+            {googleLoading ? "Connecting..." : "Sign in with Google"}
           </Button>
 
           <div className="relative mb-6">
@@ -153,21 +104,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Email Registration Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
-              <Input
-                id="fullName"
-                name="fullName"
-                type="text"
-                required
-                value={formData.fullName}
-                onChange={handleChange}
-                placeholder="Enter your full name"
-              />
-            </div>
-
+          <form onSubmit={handleSubmit} className="space-y-8">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -190,58 +127,32 @@ export default function RegisterPage() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Create a password (min. 6 characters)"
-                minLength={6}
+                placeholder="Enter your password"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name</Label>
-              <Input
-                id="companyName"
-                name="companyName"
-                type="text"
-                required
-                value={formData.companyName}
-                onChange={handleChange}
-                placeholder="Enter company name"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="companyDescription">Company Description</Label>
-              <Input
-                id="companyDescription"
-                name="companyDescription"
-                type="text"
-                value={formData.companyDescription}
-                onChange={handleChange}
-                placeholder="Brief description of your company"
-              />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating Account..." : "Create Company Account"}
+            <Button type="submit" className="w-full rounded-full py-6" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
 
           <div className="mt-4 text-center text-sm">
-            Already have an account?{" "}
+            Don't have an account?{" "}
             <Button
               variant="link"
               className="p-0"
-              onClick={() => router.push("/login")}
+              onClick={() => router.push("/register")}
             >
-              Sign in
+              Sign up
             </Button>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }
 
-// Google Icon Component
+// Reuse the same GoogleIcon component
 function GoogleIcon() {
   return (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
