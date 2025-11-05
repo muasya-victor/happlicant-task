@@ -73,7 +73,7 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <Card className="w-full max-w-[50%] border-none shadow-none">
+      <Card className="w-full md:max-w-[50%] border-none shadow-none">
         <CardHeader className="space-y-1 shadow-none">
           <CardTitle className="text-center text-2xl font-bold">
             Welcome to Muasya ATS
