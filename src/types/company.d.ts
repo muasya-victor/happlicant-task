@@ -33,4 +33,6 @@ export type Company = {
   employee_count?: number;
   founded?: number;
   ceo?: CEO;
+  created_at?: string;
+  updated_at?: string;
 };
