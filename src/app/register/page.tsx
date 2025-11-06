@@ -1,4 +1,3 @@
-// app/register/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -40,7 +39,6 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      // 1. Create user account
       const { data: authData, error: authError } = await client.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -54,10 +52,8 @@ export default function RegisterPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error("No user returned");
 
-      // Wait a moment for the user to be fully created in auth.users
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      // 2. Create profile using RPC to handle the foreign key constraint properly
       const { error: profileError } = await client.rpc(
         "create_company_admin_profile",
         {
@@ -224,7 +220,6 @@ export default function RegisterPage() {
   );
 }
 
-// Google Icon component (same as login)
 function GoogleIcon() {
   return (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">

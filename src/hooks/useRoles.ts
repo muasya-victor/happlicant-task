@@ -7,7 +7,6 @@ import { useAuthStore } from "@/store/auth-store";
 export const useRoles = () => {
   const { profile, user } = useAuth();
 
-  // ✅ Read Zustand state using individual stable selectors
   const companies = useAuthStore((s) => s.companies);
   const companyAdmins = useAuthStore((s) => s.companyAdmins);
   const agents = useAuthStore((s) => s.agents);
@@ -17,7 +16,6 @@ export const useRoles = () => {
   const loading = useAuthStore((s) => s.loading);
   const errors = useAuthStore((s) => s.errors);
 
-  // ✅ Stable Zustand actions
   const setLoading = useAuthStore((s) => s.setLoading);
   const setError = useAuthStore((s) => s.setError);
   const setCompanyAdmins = useAuthStore((s) => s.setCompanyAdmins);
@@ -27,7 +25,6 @@ export const useRoles = () => {
   const setJobs = useAuthStore((s) => s.setJobs);
   const setCurrentCompany = useAuthStore((s) => s.setCurrentCompany);
 
-  // ✅ Fetch user companies, roles, etc.
   useEffect(() => {
     if (profile && user) {
       fetchUserData();
@@ -37,7 +34,6 @@ export const useRoles = () => {
     }
   }, [profile, user]);
 
-  // ✅ Fetch jobs on company change
   useEffect(() => {
     if (currentCompany?.id) {
       fetchJobs(currentCompany.id);

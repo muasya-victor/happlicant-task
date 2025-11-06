@@ -19,8 +19,12 @@ import {
   LayoutList,
   MapPin,
   Calendar,
-  DollarSign,
+  Edit,
 } from "lucide-react";
+import { JobDialog } from "./JobDialog";
+import { DeleteJobDialog } from "./DeleteJobDialog";
+import TableEmpty from "../states/table-empty";
+import TableSkeleton from "../states/table-loading";
 
 // Utility function to format employment type
 const formatEmploymentType = (type: string): string => {
@@ -49,6 +53,22 @@ const formatLocationType = (type: string): string => {
   return typeMap[type] || type;
 };
 
+// Status badge variants mapping
+const getStatusVariant = (status: string) => {
+  switch (status) {
+    case "active":
+      return "default";
+    case "draft":
+      return "secondary";
+    case "paused":
+      return "outline";
+    case "closed":
+      return "destructive";
+    default:
+      return "outline";
+  }
+};
+
 const JobsTableComponent = () => {
   const [view, setView] = useState<"table" | "grid">("table");
 
@@ -65,14 +85,18 @@ const JobsTableComponent = () => {
     }
   }, [currentCompany?.id, refetchJobs]);
 
-  if (loading) return <div className="py-10 text-center">Loading jobs...</div>;
-  if (!jobs.length)
-    return <div className="py-10 text-center">No jobs available</div>;
+  const handleSuccess = () => {
+    // Optional: Add any success handlers like toast notifications
+    console.log("Operation completed successfully");
+  };
+
+  if (loading) return <TableSkeleton />;
+  if (!jobs.length) return <TableEmpty />;
 
   return (
     <div className="flex w-full flex-col gap-6">
       {/* Header with view controls */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">
             Job Postings
@@ -153,13 +177,7 @@ const JobsTableComponent = () => {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={
-                          job.status === "active"
-                            ? "default"
-                            : job.status === "draft"
-                              ? "secondary"
-                              : "outline"
-                        }
+                        variant={getStatusVariant(job.status)}
                         className="capitalize"
                       >
                         {formatStatus(job.status)}
@@ -180,15 +198,23 @@ const JobsTableComponent = () => {
                         })}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex items-center gap-1"
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Button>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex items-center gap-1"
+                        >
+                          <Eye className="h-4 w-4" />
+                          View
+                        </Button>
+                        <JobDialog
+                          job={job}
+                          mode="edit"
+                          onSuccess={handleSuccess}
+                        />
+                        <DeleteJobDialog job={job} onSuccess={handleSuccess} />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -197,7 +223,7 @@ const JobsTableComponent = () => {
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {jobs.map((job) => (
             <Card
               key={job.id}
@@ -209,13 +235,7 @@ const JobsTableComponent = () => {
                     {job.title}
                   </CardTitle>
                   <Badge
-                    variant={
-                      job.status === "active"
-                        ? "default"
-                        : job.status === "draft"
-                          ? "secondary"
-                          : "outline"
-                    }
+                    variant={getStatusVariant(job.status)}
                     className="ml-2 shrink-0 capitalize"
                   >
                     {formatStatus(job.status)}
@@ -269,14 +289,22 @@ const JobsTableComponent = () => {
                   <div className="text-xs text-gray-500">
                     {job.views_count} views
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1"
-                  >
-                    <Eye className="h-4 w-4" />
-                    View Details
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-1"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </Button>
+                    <JobDialog
+                      job={job}
+                      mode="edit"
+                      onSuccess={handleSuccess}
+                    />
+                    <DeleteJobDialog job={job} onSuccess={handleSuccess} />
+                  </div>
                 </div>
               </CardContent>
             </Card>

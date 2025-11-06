@@ -1,4 +1,3 @@
-// app/login/page.tsx - Add Google login here too
 "use client";
 
 import { useState } from "react";
@@ -152,7 +151,6 @@ export default function LoginPage() {
   );
 }
 
-// Reuse the same GoogleIcon component
 function GoogleIcon() {
   return (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">

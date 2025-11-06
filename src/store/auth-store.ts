@@ -2,7 +2,8 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@supabase/supabase-js";
-import type { Company, Job } from "@/types";
+import type { Company } from "@/types/company";
+import type { Job } from "@/types/jobs";
 import type {
   Profile,
   AppError,

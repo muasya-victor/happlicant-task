@@ -1,12 +1,14 @@
 import React from "react";
-import { AddCompanyDialog } from "./AddCompanyDialog";
+import { CompanyDialog } from "./CompanyDialog";
 import { CompaniesTable } from "./CompaniesTable";
 
-export default function CompaniesView(){
-    return(
-        <div className="flex flex-col gap-4">
-            <AddCompanyDialog/>
-            <CompaniesTable/>
-        </div>
-    )
+export default function CompaniesView() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <CompanyDialog />
+      </div>
+      <CompaniesTable />
+    </div>
+  );
 }

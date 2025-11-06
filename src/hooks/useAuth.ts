@@ -18,33 +18,56 @@ export const useAuth = () => {
   } = useAuthStore();
 
   useEffect(() => {
-    // Get initial session
-    client.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        setLoading("auth", true);
+        const {
+          data: { session },
+        } = await client.auth.getSession();
+
+        if (!mounted) return;
+
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchProfile(session.user.id);
+        } else {
+          // ✅ CRITICAL: Set loading to false when no user
+          setLoading("auth", false);
+          setLoading("profile", false);
+        }
+      } catch (error) {
+        if (!mounted) return;
+        console.error("Auth initialization error:", error);
         setLoading("auth", false);
         setLoading("profile", false);
       }
-    });
+    };
 
-    // Listen for auth changes
+    initializeAuth();
+
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+
       setUser(session?.user ?? null);
       if (session?.user) {
         await fetchProfile(session.user.id);
         clearErrors();
       } else {
         setProfile(null);
+        // ✅ CRITICAL: Always set loading to false
         setLoading("auth", false);
         setLoading("profile", false);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId: string) => {
@@ -69,6 +92,7 @@ export const useAuth = () => {
         timestamp: Date.now(),
       });
     } finally {
+      // ✅ CRITICAL: Always set loading to false in finally block
       setLoading("profile", false);
       setLoading("auth", false);
     }

@@ -1,4 +1,3 @@
-// components/CompanySwitcher.tsx
 "use client";
 
 import { useCompany } from "@/context/CompanyContext";
