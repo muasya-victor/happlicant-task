@@ -1,4 +1,3 @@
-// app/dashboard/jobs/page.tsx
 "use client";
 
 import JobsView from "@/components/jobs/jobs-view";
