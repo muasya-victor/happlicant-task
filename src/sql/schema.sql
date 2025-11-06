@@ -82,3 +82,111 @@ BEGIN
   VALUES (user_id, new_company_id, 'owner');
 END;
 $$;
+
+-- Jobs table (linked to companies)
+CREATE TABLE jobs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT NOT NULL,
+  requirements TEXT NOT NULL,
+  location_type TEXT NOT NULL CHECK (location_type IN ('remote', 'on_site', 'hybrid')),
+  location JSONB, -- For on_site/hybrid: {city: '', state: '', country: ''}
+  employment_type TEXT NOT NULL CHECK (employment_type IN ('full_time', 'part_time', 'contract', 'freelance', 'internship')),
+  salary_range JSONB, -- {min: number, max: number, currency: 'USD', period: 'yearly'/'monthly'/'hourly'}
+  experience_level TEXT CHECK (experience_level IN ('entry', 'mid', 'senior', 'executive')),
+  skills_required TEXT[],
+  status TEXT DEFAULT 'active' CHECK (status IN ('draft', 'active', 'paused', 'closed', 'archived')),
+  application_deadline TIMESTAMP WITH TIME ZONE,
+  application_url TEXT, -- External application link (optional)
+  views_count INTEGER DEFAULT 0,
+  applications_count INTEGER DEFAULT 0,
+  created_by UUID REFERENCES profiles(id), -- Who created the job (admin/agent)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  published_at TIMESTAMP WITH TIME ZONE -- When job was made active
+);
+
+-- Job categories table (many-to-many with jobs)
+CREATE TABLE job_categories (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Jobs to categories junction table
+CREATE TABLE job_categories_relation (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  job_id UUID REFERENCES jobs(id) ON DELETE CASCADE,
+  category_id UUID REFERENCES job_categories(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(job_id, category_id)
+);
+
+-- Job applications table
+CREATE TABLE job_applications (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  job_id UUID REFERENCES jobs(id) ON DELETE CASCADE,
+  job_seeker_id UUID REFERENCES job_seekers(id) ON DELETE CASCADE,
+  cover_letter TEXT,
+  resume_url TEXT, -- Snapshot at time of application
+  status TEXT DEFAULT 'applied' CHECK (status IN ('applied', 'reviewed', 'interview', 'rejected', 'accepted')),
+  applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  reviewed_at TIMESTAMP WITH TIME ZONE,
+  reviewed_by UUID REFERENCES profiles(id), -- Admin/agent who reviewed
+  notes TEXT, -- Internal notes from company
+  UNIQUE(job_id, job_seeker_id) -- Prevent duplicate applications
+);
+
+-- Indexes for better performance
+CREATE INDEX idx_jobs_company_id ON jobs(company_id);
+CREATE INDEX idx_jobs_status ON jobs(status);
+CREATE INDEX idx_jobs_location_type ON jobs(location_type);
+CREATE INDEX idx_jobs_employment_type ON jobs(employment_type);
+CREATE INDEX idx_jobs_created_at ON jobs(created_at);
+CREATE INDEX idx_job_applications_job_id ON job_applications(job_id);
+CREATE INDEX idx_job_applications_job_seeker_id ON job_applications(job_seeker_id);
+CREATE INDEX idx_job_applications_status ON job_applications(status);
+
+-- RLS Policies (if you're using Row Level Security)
+ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_applications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE job_categories_relation ENABLE ROW LEVEL SECURITY;
+
+-- Policies for jobs
+CREATE POLICY "Company admins/agents can manage their company jobs" ON jobs
+  FOR ALL USING (
+    company_id IN (
+      SELECT company_id FROM company_admins WHERE user_id = auth.uid()
+      UNION
+      SELECT company_id FROM agents WHERE user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Anyone can view active jobs" ON jobs
+  FOR SELECT USING (status = 'active');
+
+-- Policies for job applications
+CREATE POLICY "Job seekers can create their own applications" ON job_applications
+  FOR INSERT WITH CHECK (
+    job_seeker_id IN (SELECT id FROM job_seekers WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "Job seekers can view their own applications" ON job_applications
+  FOR SELECT USING (
+    job_seeker_id IN (SELECT id FROM job_seekers WHERE user_id = auth.uid())
+  );
+
+CREATE POLICY "Company admins/agents can view applications for their jobs" ON job_applications
+  FOR ALL USING (
+    job_id IN (
+      SELECT j.id FROM jobs j
+      WHERE j.company_id IN (
+        SELECT company_id FROM company_admins WHERE user_id = auth.uid()
+        UNION
+        SELECT company_id FROM agents WHERE user_id = auth.uid()
+      )
+    )
+  );

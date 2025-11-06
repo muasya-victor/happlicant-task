@@ -6,8 +6,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Building,Globe, MapPin } from "lucide-react";
-
+import { Building, ChevronLeft, Globe, MapPin } from "lucide-react";
+import { Button } from "../ui/button";
 
 export default function CompanyInfoCard({ company }: { company: any }) {
   const renderLocation = (location: any) => {
@@ -24,24 +24,36 @@ export default function CompanyInfoCard({ company }: { company: any }) {
   };
 
   return (
-    <Card className="md:col-span-2 lg:col-span-2">
+    <Card className="shadow-none md:col-span-2 lg:col-span-2">
       <CardHeader>
-        <CardTitle>Company Information</CardTitle>
-        <CardDescription>Basic details about your company</CardDescription>
+        <Button variant="outline" className="w-fit">
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-3">
-          <Building className="text-muted-foreground h-5 w-5" />
+          <div
+            className="h-20 w-20 rounded-lg border"
+            style={{
+              backgroundImage: company?.logo_url
+                ? `url(${company.logo_url})`
+                : "none",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
           <div>
-            <p className="font-medium">Name</p>
+            <p className="text-xs font-semibold capitalize">ORGANIZATION</p>
             <p className="text-muted-foreground text-sm">{company.name}</p>
           </div>
         </div>
 
         {company.description && (
           <div>
-            <p className="font-medium">Description</p>
-            <p className="text-muted-foreground text-sm">
+            <p className="w-fit rounded bg-gray-50 px-2 py-1 font-medium">
+              Description
+            </p>
+            <p className="text-muted-foreground text-xs p-2">
               {company.description}
             </p>
           </div>

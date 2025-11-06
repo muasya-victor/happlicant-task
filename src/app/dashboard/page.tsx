@@ -1,6 +1,7 @@
 // app/dashboard/page.tsx
 "use client";
 
+import { useState, useEffect } from "react";
 import { useCompany } from "@/context/CompanyContext";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -12,28 +13,37 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import CompanySwitcher from "@/components/company/switcher";
-import { Building, Users, Calendar, Globe, MapPin } from "lucide-react";
-import CompanyInfoCard from "@/components/company/CompanyInfoCard"
-import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton"
+import { Building, Users, Calendar, Briefcase } from "lucide-react";
+import CompanyInfoCard from "@/components/company/CompanyInfoCard";
+import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
 import NoCompaniesCard from "@/components/company/NoCompaniesCard";
-
+import { JobsTable } from "@/components/jobs/jobs-table";
+import JobsView from "@/components/jobs/jobs-view";
+import CompaniesView from "@/components/company/CompaniesView";
 
 export default function DashboardPage() {
   const { currentCompany, companies } = useCompany();
   const { profile, loading: authLoading } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview");
+
+  // Reset to overview when company changes
+  useEffect(() => {
+    setActiveTab("overview");
+  }, [currentCompany?.id]);
 
   if (authLoading) {
     return <DashboardSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-4 p-4">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-xl font-bold tracking-tight">
             {currentCompany ? `${currentCompany.name} Dashboard` : "Dashboard"}
           </h1>
           <p className="text-muted-foreground">
@@ -51,85 +61,51 @@ export default function DashboardPage() {
       {!currentCompany ? (
         <NoCompaniesCard />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Company Info Card */}
-          <CompanyInfoCard company={currentCompany} />
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="space-y-6"
+        >
+          <TabsList>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="jobs">Jobs</TabsTrigger>
+            <TabsTrigger value="companies">Companies</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
 
-          {/* Actions Card */}
-          <Card className="md:col-span-2 lg:col-span-3">
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-              <CardDescription>Manage your company and team</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-4">
-                <Button variant="outline">
-                  <Users className="mr-2 h-4 w-4" />
-                  Manage Team
-                </Button>
-                <Button variant="outline">
-                  <Building className="mr-2 h-4 w-4" />
-                  Company Settings
-                </Button>
-                <Button variant="outline">View Analytics</Button>
-              </div>
-            </CardContent>
-          </Card>
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <CompanyInfoCard company={currentCompany} />
+              {/* Add other overview cards here */}
+            </div>
+          </TabsContent>
 
-          {/* Companies List Card (for admins with multiple companies) */}
-          {companies.length > 1 && (
-            <Card className="md:col-span-2 lg:col-span-3">
+          <TabsContent value="jobs">
+            <JobsView />
+          </TabsContent>
+
+          <TabsContent value="companies">
+            <CompaniesView/>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
               <CardHeader>
-                <CardTitle>Your Companies</CardTitle>
+                <CardTitle>Company Settings</CardTitle>
                 <CardDescription>
-                  All companies you have access to
+                  Manage your company settings and preferences
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {companies.map((company) => (
-                    <div
-                      key={company.id}
-                      className={`flex items-center justify-between rounded-lg border p-4 ${
-                        company.id === currentCompany.id
-                          ? "bg-primary/5 border-primary"
-                          : "bg-muted/20"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <Building className="text-muted-foreground h-5 w-5" />
-                        <div>
-                          <p className="font-medium">{company.name}</p>
-                          <p className="text-muted-foreground text-sm">
-                            {company.employee_count
-                              ? `${company.employee_count} employees`
-                              : "No employee count"}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge
-                        variant={
-                          company.id === currentCompany.id
-                            ? "default"
-                            : "secondary"
-                        }
-                      >
-                        {company.id === currentCompany.id
-                          ? "Current"
-                          : "Switch"}
-                      </Badge>
-                    </div>
-                  ))}
+                <div className="text-muted-foreground py-8 text-center">
+                  <Building className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                  <p>Settings content coming soon...</p>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
 }
-
-
-
-

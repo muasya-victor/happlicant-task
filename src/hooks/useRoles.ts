@@ -3,123 +3,128 @@ import { useAuth } from "./useAuth";
 import { useEffect } from "react";
 import client from "@/api/client";
 import { useAuthStore } from "@/store/auth-store";
-import type { CompanyAdmin, Agent, JobSeeker } from "@/types/user";
 
 export const useRoles = () => {
   const { profile, user } = useAuth();
-  const {
-    companies,
-    companyAdmins,
-    agents,
-    jobSeeker,
-    currentCompany,
-    loading,
-    errors,
-    setCompanies,
-    setCompanyAdmins,
-    setAgents,
-    setJobSeeker,
-    setLoading,
-    setError,
-  } = useAuthStore();
 
+  // ✅ Read Zustand state using individual stable selectors
+  const companies = useAuthStore((s) => s.companies);
+  const companyAdmins = useAuthStore((s) => s.companyAdmins);
+  const agents = useAuthStore((s) => s.agents);
+  const jobSeeker = useAuthStore((s) => s.jobSeeker);
+  const currentCompany = useAuthStore((s) => s.currentCompany);
+  const jobs = useAuthStore((s) => s.jobs);
+  const loading = useAuthStore((s) => s.loading);
+  const errors = useAuthStore((s) => s.errors);
+
+  // ✅ Stable Zustand actions
+  const setLoading = useAuthStore((s) => s.setLoading);
+  const setError = useAuthStore((s) => s.setError);
+  const setCompanyAdmins = useAuthStore((s) => s.setCompanyAdmins);
+  const setCompanies = useAuthStore((s) => s.setCompanies);
+  const setAgents = useAuthStore((s) => s.setAgents);
+  const setJobSeeker = useAuthStore((s) => s.setJobSeeker);
+  const setJobs = useAuthStore((s) => s.setJobs);
+  const setCurrentCompany = useAuthStore((s) => s.setCurrentCompany);
+
+  // ✅ Fetch user companies, roles, etc.
   useEffect(() => {
     if (profile && user) {
       fetchUserData();
     } else {
       setLoading("companies", false);
+      setLoading("jobs", false);
     }
   }, [profile, user]);
 
+  // ✅ Fetch jobs on company change
+  useEffect(() => {
+    if (currentCompany?.id) {
+      fetchJobs(currentCompany.id);
+    } else {
+      setJobs([]);
+    }
+  }, [currentCompany?.id]);
+
   const fetchUserData = async () => {
     if (!user?.id) return;
-
     try {
       setLoading("companies", true);
       setError("companies", null);
 
       switch (profile?.user_type) {
-        case "company_admin":
+        case "company_admin": {
           const { data: adminData, error: adminError } = await client
             .from("company_admins")
             .select("*")
             .eq("user_id", user.id);
-
           if (adminError) throw adminError;
+
           setCompanyAdmins(adminData || []);
 
-          if (adminData?.length) {
+          if (adminData?.length > 0) {
             const { data: companyData, error: companyError } = await client
               .from("companies")
               .select("*")
               .in(
                 "id",
-                adminData.map((admin) => admin.company_id),
+                adminData.map((a) => a.company_id),
               );
-
             if (companyError) throw companyError;
+
             setCompanies(companyData || []);
 
-            // Restore last selected company
-            const lastCompanyId = localStorage.getItem("lastSelectedCompany");
-            if (lastCompanyId) {
-              const lastCompany = companyData?.find(
-                (c) => c.id === lastCompanyId,
-              );
-              if (lastCompany) {
-                useAuthStore.getState().setCurrentCompany(lastCompany);
-              }
+            const lastId = localStorage.getItem("lastSelectedCompany");
+            const lastCompany = companyData?.find((c) => c.id === lastId);
+            if (lastCompany) {
+              setCurrentCompany(lastCompany);
             }
           }
           break;
+        }
 
-        case "agent":
+        case "agent": {
           const { data: agentData, error: agentError } = await client
             .from("agents")
             .select("*")
             .eq("user_id", user.id);
-
           if (agentError) throw agentError;
+
           setAgents(agentData || []);
 
-          // Also fetch companies for agents
-          if (agentData?.length) {
+          if (agentData?.length > 0) {
             const { data: companyData, error: companyError } = await client
               .from("companies")
               .select("*")
               .in(
                 "id",
-                agentData.map((agent) => agent.company_id),
+                agentData.map((a) => a.company_id),
               );
-
             if (companyError) throw companyError;
+
             setCompanies(companyData || []);
 
-            const lastCompanyId = localStorage.getItem("lastSelectedCompany");
-            if (lastCompanyId) {
-              const lastCompany = companyData?.find(
-                (c) => c.id === lastCompanyId,
-              );
-              if (lastCompany) {
-                useAuthStore.getState().setCurrentCompany(lastCompany);
-              }
+            const lastId = localStorage.getItem("lastSelectedCompany");
+            const lastCompany = companyData?.find((c) => c.id === lastId);
+            if (lastCompany) {
+              setCurrentCompany(lastCompany);
             }
           }
           break;
+        }
 
-        case "job_seeker":
-          const { data: seekerData, error: seekerError } = await client
+        case "job_seeker": {
+          const { data, error } = await client
             .from("job_seekers")
             .select("*")
             .eq("user_id", user.id)
             .single();
-
-          if (seekerError) throw seekerError;
-          setJobSeeker(seekerData);
+          if (error) throw error;
+          setJobSeeker(data);
           break;
+        }
       }
     } catch (error) {
-      console.error("Error fetching user data:", error);
       setError("companies", {
         message:
           error instanceof Error ? error.message : "Failed to fetch user data",
@@ -131,94 +136,93 @@ export const useRoles = () => {
     }
   };
 
+  const fetchJobs = async (companyId: string) => {
+    try {
+      setLoading("jobs", true);
+      setError("jobs", null);
+
+      const { data, error } = await client
+        .from("jobs")
+        .select("*")
+        .eq("company_id", companyId)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setJobs(data || []);
+    } catch (error) {
+      setError("jobs", {
+        message:
+          error instanceof Error ? error.message : "Failed to fetch jobs",
+        code: "JOBS_FETCH_ERROR",
+        timestamp: Date.now(),
+      });
+      setJobs([]);
+    } finally {
+      setLoading("jobs", false);
+    }
+  };
+
+  const refetchJobs = async () => {
+    if (currentCompany?.id) {
+      await fetchJobs(currentCompany.id);
+    }
+  };
+
   const switchCompany = async (companyId: string) => {
     if (profile?.user_type === "company_admin") {
       const isAuthorized = companyAdmins.some(
-        (admin) => admin.company_id === companyId,
+        (a) => a.company_id === companyId,
       );
-
       if (isAuthorized) {
-        // Optimistic update
         const company = companies.find((c) => c.id === companyId);
-        if (company) {
-          useAuthStore.getState().setCurrentCompany(company);
-        }
-
-        // Validate in background
-        try {
-          const { data } = await client
-            .from("company_admins")
-            .select("id")
-            .eq("user_id", user?.id)
-            .eq("company_id", companyId)
-            .single();
-
-          if (!data) {
-            // Revert if not actually authorized
-            const firstCompany = companies[0];
-            useAuthStore.getState().setCurrentCompany(firstCompany || null);
-            return false;
-          }
-        } catch (error) {
-          console.error("Error validating company switch:", error);
-          const firstCompany = companies[0];
-          useAuthStore.getState().setCurrentCompany(firstCompany || null);
-          return false;
-        }
-
+        if (company) setCurrentCompany(company);
         return true;
       }
     }
 
-    // For agents, check if they belong to the company
     if (profile?.user_type === "agent") {
-      const isAuthorized = agents.some(
-        (agent) => agent.company_id === companyId,
-      );
-
+      const isAuthorized = agents.some((a) => a.company_id === companyId);
       if (isAuthorized) {
         const company = companies.find((c) => c.id === companyId);
         if (company) {
-          useAuthStore.getState().setCurrentCompany(company);
+          setCurrentCompany(company);
           return true;
         }
       }
     }
-
     return false;
   };
 
-  const hasPermission = (permission: string, companyId?: string): boolean => {
+  const hasPermission = (permission: string, companyId?: string) => {
     if (profile?.user_type === "super_admin") return true;
-
-    if (profile?.user_type === "company_admin" && companyId) {
-      return companyAdmins.some((admin) => admin.company_id === companyId);
-    }
-
+    if (profile?.user_type === "company_admin" && companyId)
+      return companyAdmins.some((a) => a.company_id === companyId);
     if (profile?.user_type === "agent" && companyId) {
       const agent = agents.find((a) => a.company_id === companyId);
-      return agent?.permissions[permission] || false;
+      return agent?.permissions?.[permission] || false;
     }
-
     return false;
   };
 
   const refetchAllData = async () => {
     await fetchUserData();
+    if (currentCompany?.id) await fetchJobs(currentCompany.id);
   };
 
   return {
+    companies,
     companyAdmins,
     agents,
     jobSeeker,
-    companies,
     currentCompany,
-    loading: loading.companies,
+    jobs,
+    loading: loading.companies || loading.jobs,
     loadingStates: loading,
     errors,
     switchCompany,
     hasPermission,
     refetchAllData,
+    refetchJobs,
     currentUserType: profile?.user_type,
   };
 };
