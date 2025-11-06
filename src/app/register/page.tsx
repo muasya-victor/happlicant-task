@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import client from "@/api/client";
+import AuthLayout from "@/components/auth/AuthLayout";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -53,35 +54,21 @@ export default function RegisterPage() {
       if (authError) throw authError;
       if (!authData.user) throw new Error("No user returned");
 
-      // 2. Create profile
-      const { error: profileError } = await client.from("profiles").insert({
-        id: authData.user.id,
-        email: formData.email,
-        user_type: "company_admin",
-      });
+      // Wait a moment for the user to be fully created in auth.users
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // 2. Create profile using RPC to handle the foreign key constraint properly
+      const { error: profileError } = await client.rpc(
+        "create_company_admin_profile",
+        {
+          user_id: authData.user.id,
+          user_email: formData.email,
+          company_name: formData.companyName,
+          company_description: formData.companyDescription,
+        },
+      );
 
       if (profileError) throw profileError;
-
-      // 3. Create company
-      const { data: companyData, error: companyError } = await client
-        .from("companies")
-        .insert({
-          name: formData.companyName,
-          description: formData.companyDescription,
-        })
-        .select()
-        .single();
-
-      if (companyError) throw companyError;
-
-      // 4. Link user as company admin
-      const { error: adminError } = await client.from("company_admins").insert({
-        user_id: authData.user.id,
-        company_id: companyData.id,
-        role: "owner",
-      });
-
-      if (adminError) throw adminError;
 
       alert(
         "Registration successful! Please check your email to verify your account.",
@@ -101,10 +88,6 @@ export default function RegisterPage() {
       const { error } = await client.auth.signInWithOAuth({
         provider: "google",
         options: {
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
           redirectTo: `${window.location.origin}/auth/callback`,
         },
       });
@@ -112,29 +95,26 @@ export default function RegisterPage() {
       if (error) throw error;
     } catch (error) {
       console.error("Google OAuth error:", error);
-      alert(
-        "Google sign up failed. Please try again or use email registration.",
-      );
+      alert("Google sign up failed. Please try again.");
       setGoogleLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
+    <AuthLayout>
+      <Card className="w-full border-none shadow-none md:max-w-[50%]">
+        <CardHeader className="space-y-1 shadow-none">
           <CardTitle className="text-center text-2xl font-bold">
-            Create Company Account
+            Join Muasya ATS
           </CardTitle>
           <CardDescription className="text-center">
-            Register as a company administrator
+            Create your company account to get started
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {/* Google Sign Up Button */}
+        <CardContent className="shadow-none">
           <Button
             variant="outline"
-            className="mb-6 w-full"
+            className="mb-6 w-full rounded-full py-6"
             onClick={handleGoogleSignUp}
             disabled={googleLoading}
           >
@@ -153,7 +133,6 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          {/* Email Registration Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -220,7 +199,11 @@ export default function RegisterPage() {
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="mt-4 w-full rounded-full py-6"
+              disabled={loading}
+            >
               {loading ? "Creating Account..." : "Create Company Account"}
             </Button>
           </form>
@@ -230,18 +213,18 @@ export default function RegisterPage() {
             <Button
               variant="link"
               className="p-0"
-              onClick={() => router.push("/login")}
+              onClick={() => router.push("/")}
             >
               Sign in
             </Button>
           </div>
         </CardContent>
       </Card>
-    </div>
+    </AuthLayout>
   );
 }
 
-// Google Icon Component
+// Google Icon component (same as login)
 function GoogleIcon() {
   return (
     <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
