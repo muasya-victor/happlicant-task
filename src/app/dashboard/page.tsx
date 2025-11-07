@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
 import { useCompany } from "@/context/CompanyContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/store/auth-store";
 import CompanyInfoCard from "@/components/company/CompanyInfoCard";
 import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
 import NoCompaniesCard from "@/components/company/NoCompaniesCard";
-import { useAuthStore } from "@/store/auth-store";
 import {
   Card,
   CardContent,
@@ -13,16 +14,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Building, Users, Briefcase, Eye } from "lucide-react";
-import { useEffect } from "react";
+import { Users, Briefcase, Eye } from "lucide-react";
 
 export default function DashboardPage() {
+  // ✅ Always call hooks first — before any conditional return
   const { currentCompany, companies, loading: companyLoading } = useCompany();
   const { loading: authLoading } = useAuth();
   const refetchCompanies = useAuthStore((s) => s.refetchCompanies);
 
-  
+  // ✅ Hooks must not be conditionally skipped
+  useEffect(() => {
+    refetchCompanies();
+  }, [refetchCompanies]);
 
+  // ✅ Now you can safely do early returns
   if (authLoading) {
     return <DashboardSkeleton />;
   }
