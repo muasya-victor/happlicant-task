@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import CompanyInfoCard from "@/components/company/CompanyInfoCard";
 import DashboardSkeleton from "@/components/dashboard/DashboardSkeleton";
 import NoCompaniesCard from "@/components/company/NoCompaniesCard";
+import { useAuthStore } from "@/store/auth-store";
 import {
   Card,
   CardContent,
@@ -13,10 +14,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Building, Users, Briefcase, Eye } from "lucide-react";
+import { useEffect } from "react";
 
 export default function DashboardPage() {
   const { currentCompany, companies, loading: companyLoading } = useCompany();
   const { loading: authLoading } = useAuth();
+  const refetchCompanies = useAuthStore((s) => s.refetchCompanies);
+
+  
 
   if (authLoading) {
     return <DashboardSkeleton />;

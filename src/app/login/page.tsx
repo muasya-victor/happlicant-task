@@ -72,10 +72,10 @@ export default function LoginPage() {
 
   return (
     <AuthLayout>
-      <Card className="w-full md:max-w-[50%] border-none shadow-none">
+      <Card className="w-full border-none shadow-none md:max-w-[50%]">
         <CardHeader className="space-y-1 shadow-none">
           <CardTitle className="text-center text-2xl font-bold">
-            Welcome to Muasya ATS
+            Welcome to Happlicant
           </CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account
@@ -84,7 +84,7 @@ export default function LoginPage() {
         <CardContent className="shadow-none">
           <Button
             variant="outline"
-            className="mb-6 w-full py-6 rounded-full"
+            className="mb-6 w-full rounded-full py-6"
             onClick={handleGoogleLogin}
             disabled={googleLoading}
           >
@@ -130,7 +130,11 @@ export default function LoginPage() {
               />
             </div>
 
-            <Button type="submit" className="w-full rounded-full py-6" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full rounded-full py-6"
+              disabled={loading}
+            >
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>

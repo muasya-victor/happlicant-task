@@ -1,7 +1,6 @@
-// context/CompanyContext.tsx
 "use client";
 
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useMemo, useCallback } from "react";
 import type { ReactNode } from "react";
 import { useAuthStore } from "@/store/auth-store";
 import { useRoles } from "@/hooks/useRoles";
@@ -32,35 +31,52 @@ export const CompanyProvider = ({ children }: { children: ReactNode }) => {
 
   const { setCurrentCompany: setStoreCurrentCompany } = useAuthStore();
 
-  const canSwitchToCompany = (companyId: string): boolean => {
-    return companies.some((company) => company.id === companyId);
-  };
+  // ✅ useCallback ensures function references are stable
+  const canSwitchToCompany = useCallback(
+    (companyId: string): boolean => companies.some((c) => c.id === companyId),
+    [companies],
+  );
 
-  const handleSetCurrentCompany = async (company: Company | null) => {
-    if (!company) {
-      setStoreCurrentCompany(null);
-      return;
-    }
+  const handleSetCurrentCompany = useCallback(
+    async (company: Company | null) => {
+      if (!company) {
+        setStoreCurrentCompany(null);
+        return;
+      }
 
-    const allowed = await switchCompany(company.id);
-    if (!allowed) {
-      throw new Error("Not authorized to switch to this company");
-    }
-  };
+      const allowed = await switchCompany(company.id);
+      if (!allowed) {
+        throw new Error("Not authorized to switch to this company");
+      }
+    },
+    [switchCompany, setStoreCurrentCompany],
+  );
 
-  const refetchCompanies = async () => {
+  const refetchCompanies = useCallback(async () => {
     await refetchAllData();
-  };
+  }, [refetchAllData]);
 
-  const value: CompanyContextType = {
-    companies,
-    currentCompany,
-    setCurrentCompany: handleSetCurrentCompany,
-    canSwitchToCompany,
-    loading: rolesLoading,
-    error: errors.companies || null,
-    refetchCompanies,
-  };
+  // ✅ useMemo ensures object identity stability
+  const value = useMemo<CompanyContextType>(
+    () => ({
+      companies,
+      currentCompany,
+      setCurrentCompany: handleSetCurrentCompany,
+      canSwitchToCompany,
+      loading: rolesLoading,
+      error: errors?.companies || null,
+      refetchCompanies,
+    }),
+    [
+      companies,
+      currentCompany,
+      handleSetCurrentCompany,
+      canSwitchToCompany,
+      rolesLoading,
+      errors?.companies,
+      refetchCompanies,
+    ],
+  );
 
   return (
     <CompanyContext.Provider value={value}>{children}</CompanyContext.Provider>

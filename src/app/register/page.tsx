@@ -101,7 +101,7 @@ export default function RegisterPage() {
       <Card className="w-full border-none shadow-none md:max-w-[50%]">
         <CardHeader className="space-y-1 shadow-none">
           <CardTitle className="text-center text-2xl font-bold">
-            Join Muasya ATS
+            Join Happlicant
           </CardTitle>
           <CardDescription className="text-center">
             Create your company account to get started

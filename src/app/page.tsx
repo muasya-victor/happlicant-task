@@ -75,7 +75,7 @@ export default function LoginPage() {
       <Card className="w-full border-none shadow-none md:max-w-[50%]">
         <CardHeader className="space-y-1 shadow-none">
           <CardTitle className="text-center text-2xl font-bold">
-            Welcome to Muasya ATS
+            Welcome to Happlicant
           </CardTitle>
           <CardDescription className="text-center">
             Enter your credentials to access your account
