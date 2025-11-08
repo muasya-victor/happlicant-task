@@ -118,7 +118,7 @@ export default function RegisterPage() {
             {googleLoading ? "Connecting..." : "Sign up with Google"}
           </Button>
 
-          <div className="relative mb-6">
+          {/* <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
@@ -202,7 +202,7 @@ export default function RegisterPage() {
             >
               {loading ? "Creating Account..." : "Create Company Account"}
             </Button>
-          </form>
+          </form> */}
 
           <div className="mt-4 text-center text-sm">
             Already have an account?{" "}

@@ -14,15 +14,21 @@ import {
 import { Label } from "@/components/ui/label";
 import client from "@/api/client";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { useJobs } from "@/hooks/useJobs";
+import { log } from "console";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const {jobs, isLoading: jobsLoading} = useJobs()
   const [googleLoading, setGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
+
+  console.log("Component state:", { jobs, jobsLoading });
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({

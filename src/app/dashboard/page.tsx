@@ -17,12 +17,10 @@ import {
 import { Users, Briefcase, Eye } from "lucide-react";
 
 export default function DashboardPage() {
-  // ✅ Always call hooks first — before any conditional return
   const { currentCompany, companies, loading: companyLoading } = useCompany();
   const { loading: authLoading } = useAuth();
   const refetchCompanies = useAuthStore((s) => s.refetchCompanies);
 
-  // ✅ Hooks must not be conditionally skipped
   useEffect(() => {
     refetchCompanies();
   }, [refetchCompanies]);

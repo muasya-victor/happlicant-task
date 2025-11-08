@@ -36,8 +36,9 @@ const jobSchema = z.object({
     "internship",
   ]),
   requirements: z.string().optional(),
-  status: z.enum(["active", "draft", "closed", "paused"]),
+  status: z.enum(["active", "draft", "closed", "paused", "archived"]), // Add "archived"
 });
+
 
 type JobFormValues = z.infer<typeof jobSchema>;
 

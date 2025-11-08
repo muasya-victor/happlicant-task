@@ -45,10 +45,17 @@ const getIndustryField = (
   return "";
 };
 
-const getCEOField = (ceo: CEO | undefined, field: string): string => {
+const getCEOField = (ceo: CEO | undefined, field: string): string | number => {
   if (!ceo) return "";
   if (typeof ceo === "string") return field === "name" ? ceo : "";
-  return (ceo as any)[field] || "";
+
+  const value = (ceo as any)[field];
+
+  if (field === "since" && typeof value === "number") {
+    return value;
+  }
+
+  return value || "";
 };
 
 export function CompanyDialog({
@@ -87,6 +94,13 @@ export function CompanyDialog({
   const setCurrentCompany = useAuthStore((s) => s.setCurrentCompany);
   const user = useAuthStore((s) => s.user);
 
+  // Clear errors when dialog toggles open
+  useEffect(() => {
+    if (open) {
+      setErrorMsg("");
+    }
+  }, [open]);
+
   // Reset form when dialog opens/closes or company changes
   useEffect(() => {
     if (open && company && mode === "edit") {
@@ -109,9 +123,10 @@ export function CompanyDialog({
       setSectors(getIndustryField(company.industry, "sectors"));
 
       // Safe CEO parsing
-      setCeoName(getCEOField(company.ceo, "name"));
-      setCeoSince(getCEOField(company.ceo, "since") || "");
-      setCeoBio(getCEOField(company.ceo, "bio"));
+      const ceoSinceValue = getCEOField(company.ceo, "since");
+      setCeoSince(typeof ceoSinceValue === "number" ? ceoSinceValue : "");
+      setCeoName(getCEOField(company.ceo, "name") as string);
+      setCeoBio(getCEOField(company.ceo, "bio") as string);
     } else if (open && mode === "add") {
       // Reset all fields for add mode
       setName("");
@@ -133,7 +148,6 @@ export function CompanyDialog({
   }, [open, company, mode]);
 
   const prepareCompanyData = () => {
-    // Build location object only if we have relevant data
     const location: Location | undefined =
       address || city || zipCode || country
         ? {
@@ -144,10 +158,9 @@ export function CompanyDialog({
           }
         : undefined;
 
-    // Build industry object only if we have relevant data
     const industry: Industry | undefined =
       primaryIndustry || sectors
-        ? {
+        ? ({
             ...(primaryIndustry && { primary: primaryIndustry }),
             ...(sectors && {
               sectors: sectors
@@ -155,10 +168,9 @@ export function CompanyDialog({
                 .map((s) => s.trim())
                 .filter(Boolean),
             }),
-          }
+          } as Industry)
         : undefined;
 
-    // Build CEO object only if we have relevant data
     const ceo: CEO | undefined =
       ceoName || ceoSince || ceoBio
         ? {
@@ -182,10 +194,23 @@ export function CompanyDialog({
   };
 
   const onSave = async () => {
-    if (!name.trim() || !user) {
+    // Validate name first (clear and specific)
+    if (!name.trim()) {
       setErrorMsg("Company name is required");
       return;
     }
+
+    // Validate user permission separately with clearer message
+    if (!user) {
+      console.warn(
+        "Attempted to create/update company without authenticated user.",
+      );
+      setErrorMsg("You must be signed in to create or edit a company.");
+      return;
+    }
+
+    // prevent duplicate calls while saving
+    if (saving) return;
 
     setSaving(true);
     setErrorMsg("");
@@ -236,7 +261,7 @@ export function CompanyDialog({
     } catch (err: any) {
       console.error(`Failed to ${mode} company:`, err);
       setErrorMsg(
-        err.message || `Failed to ${mode} company. Please try again.`,
+        err?.message || `Failed to ${mode} company. Please try again.`,
       );
     } finally {
       setSaving(false);
@@ -367,7 +392,7 @@ export function CompanyDialog({
               </div>
             </div>
 
-            {/* Location Section */}
+            {/* Location, Industry, CEO sections (unchanged) */}
             <div className="border-t pt-4">
               <h3 className="mb-3 text-lg font-medium">Location Information</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -412,7 +437,6 @@ export function CompanyDialog({
               </div>
             </div>
 
-            {/* Industry Section */}
             <div className="border-t pt-4">
               <h3 className="mb-3 text-lg font-medium">Industry Information</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -439,7 +463,6 @@ export function CompanyDialog({
               </div>
             </div>
 
-            {/* CEO Section */}
             <div className="border-t pt-4">
               <h3 className="mb-3 text-lg font-medium">CEO Information</h3>
               <div className="grid grid-cols-2 gap-4">
@@ -499,7 +522,6 @@ export function CompanyDialog({
   );
 }
 
-// Export AddCompanyDialog for backward compatibility
 export function AddCompanyDialog() {
   return <CompanyDialog mode="add" />;
 }

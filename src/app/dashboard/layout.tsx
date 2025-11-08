@@ -30,7 +30,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const pathname = usePathname();
   const { currentCompany } = useCompany();
-  const { profile, isLoading } = useAuth();
+  const { profile, loading } = useAuth();
 
   const navItems: NavItem[] = [
     {
@@ -81,7 +81,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const UserProfile = () => {
-    if (isLoading) {
+    if (loading) {
       return (
         <div className="flex items-center gap-3 p-2">
           <Skeleton className="h-8 w-8 rounded-full" />

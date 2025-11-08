@@ -1,4 +1,3 @@
-// store/auth-store.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { User } from "@supabase/supabase-js";
@@ -50,7 +49,7 @@ export interface AuthState {
   updateJob: (job: Job) => void;
   removeJob: (id: string) => void;
   refetchJobs: () => Promise<void>;
-  refetchCompanies: () => Promise<void>; // ✅ NEW
+  refetchCompanies: () => Promise<void>;
 
   setLoading: (key: keyof AuthState["loading"], value: boolean) => void;
   setError: (key: keyof AuthState["errors"], error: AppError | null) => void;
@@ -73,17 +72,29 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user) => set({ user }),
       setProfile: (profile) => set({ profile }),
+
+      // ✅ FIXED version — fully type-safe and clear
       setCompanies: (companies) => {
         const state = get();
-        let current = state.currentCompany;
-        if (current && !companies.find((c) => c.id === current.id)) {
-          current = companies[0] || null;
+        const current = state.currentCompany;
+
+        let nextCurrent: Company | null = current ?? null;
+
+        // Ensure currentCompany still exists in the list
+        if (
+          !nextCurrent ||
+          !companies.some((c) => c.id === nextCurrent?.id)
+        ) {
+          nextCurrent = companies[0] || null;
         }
-        set({ companies, currentCompany: current });
+
+        set({ companies, currentCompany: nextCurrent });
       },
+
       setCompanyAdmins: (companyAdmins) => set({ companyAdmins }),
       setAgents: (agents) => set({ agents }),
       setJobSeeker: (jobSeeker) => set({ jobSeeker }),
+
       setCurrentCompany: (company) => {
         if (company) localStorage.setItem("lastSelectedCompany", company.id);
         set({ currentCompany: company });
@@ -129,7 +140,7 @@ export const useAuthStore = create<AuthState>()(
           const { data, error } = await client
             .from("jobs")
             .select("*")
-            .eq("company_id", state.currentCompany.id) // ✅ only current company
+            .eq("company_id", state.currentCompany.id)
             .order("created_at", { ascending: false });
 
           if (error) throw error;
@@ -188,18 +199,21 @@ export const useAuthStore = create<AuthState>()(
           const authorizedCompanies = data || [];
           set({ companies: authorizedCompanies });
 
-          // Update current company if needed
+          // ✅ Ensure currentCompany remains valid
           const current = state.currentCompany;
+          let nextCurrent: Company | null = current ?? null;
+
           if (
-            current &&
-            !authorizedCompanies.find((c) => c.id === current.id)
+            !nextCurrent ||
+            !authorizedCompanies.some((c) => c.id === nextCurrent?.id)
           ) {
-            set({ currentCompany: authorizedCompanies[0] || null });
+            nextCurrent = authorizedCompanies[0] || null;
           }
+
+          set({ currentCompany: nextCurrent });
         } catch (err) {
           console.error("Error fetching companies:", err);
           set({ companies: [] });
-          // ... error handling
         } finally {
           set((state) => ({ loading: { ...state.loading, companies: false } }));
         }

@@ -92,7 +92,7 @@ export default function LoginPage() {
             {googleLoading ? "Connecting..." : "Sign in with Google"}
           </Button>
 
-          <div className="relative mb-6">
+          {/* <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
@@ -137,7 +137,7 @@ export default function LoginPage() {
             >
               {loading ? "Signing in..." : "Sign In"}
             </Button>
-          </form>
+          </form> */}
 
           <div className="mt-4 text-center text-sm">
             Don't have an account?{" "}

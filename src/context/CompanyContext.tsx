@@ -31,7 +31,6 @@ export const CompanyProvider = ({ children }: { children: ReactNode }) => {
 
   const { setCurrentCompany: setStoreCurrentCompany } = useAuthStore();
 
-  // ✅ useCallback ensures function references are stable
   const canSwitchToCompany = useCallback(
     (companyId: string): boolean => companies.some((c) => c.id === companyId),
     [companies],
@@ -56,7 +55,6 @@ export const CompanyProvider = ({ children }: { children: ReactNode }) => {
     await refetchAllData();
   }, [refetchAllData]);
 
-  // ✅ useMemo ensures object identity stability
   const value = useMemo<CompanyContextType>(
     () => ({
       companies,
