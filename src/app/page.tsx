@@ -50,7 +50,6 @@ export default function LoginPage() {
 
       setUser(data.user);
 
-      // Fix: Properly type the profile response
       const profileResponse = await client
         .from("profiles")
         .select("*")
