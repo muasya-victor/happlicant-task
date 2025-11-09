@@ -10,6 +10,7 @@ export interface JobSlice {
   updateJob: (job: Job) => void;
   removeJob: (id: string) => void;
   refetchJobs: () => Promise<void>;
+  createJob: (jobData: Partial<Job>) => Promise<Job>;
 }
 
 export const createJobSlice: StateCreator<AuthState, [], [], JobSlice> = (
@@ -58,6 +59,41 @@ export const createJobSlice: StateCreator<AuthState, [], [], JobSlice> = (
     } catch (err) {
       console.error("Error refetching jobs:", err);
       set({ jobs: [] });
+    } finally {
+      set((s) => ({ loading: { ...s.loading, jobs: false } }));
+    }
+  },
+
+  createJob: async (jobData: Partial<Job>) => {
+    const state = get();
+    if (!state.user?.id || !state.currentCompany?.id) {
+      throw new Error("User not authenticated or no company selected");
+    }
+
+    set((s) => ({
+      loading: { ...s.loading, jobs: true },
+      errors: { ...s.errors, jobs: null },
+    }));
+
+    try {
+      const { data, error } = await client
+        .from("jobs")
+        .insert({
+          ...jobData,
+          company_id: state.currentCompany.id,
+          created_by: state.user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set((s) => ({ jobs: [data, ...s.jobs] }));
+
+      return data;
+    } catch (err) {
+      console.error("Error creating job:", err);
+      throw err;
     } finally {
       set((s) => ({ loading: { ...s.loading, jobs: false } }));
     }
