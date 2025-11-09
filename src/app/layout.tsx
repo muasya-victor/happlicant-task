@@ -1,5 +1,6 @@
 import Sidebar from "@/components/layout/sidebar";
 import TopNavbar from "@/components/layout/top-nav";
+import { ToastProvider } from "@/providers/toast-provider";
 import "@/styles/globals.css";
 
 import { type Metadata } from "next";
@@ -22,6 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable}`}>
       <body className="overflow-x-auto">
+        <ToastProvider/>
         <div className="h-screen w-screen bg-gray-50">{children}</div>
       </body>
     </html>

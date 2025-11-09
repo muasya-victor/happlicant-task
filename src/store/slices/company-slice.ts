@@ -18,6 +18,7 @@ export interface CompanySlice {
 
   refetchCompanies: () => Promise<void>;
   createCompany: (companyData: Partial<Company>) => Promise<Company>;
+  deleteCompany: (companyId: string) => Promise<{ success: boolean }>;
 }
 
 export const createCompanySlice: StateCreator<
@@ -136,6 +137,55 @@ export const createCompanySlice: StateCreator<
       return newCompany;
     } catch (err) {
       console.error("Error creating company:", err);
+      throw err;
+    } finally {
+      set((s) => ({ loading: { ...s.loading, companies: false } }));
+    }
+  },
+  deleteCompany: async (companyId: string) => {
+    const state = get();
+    if (!state.user?.id) throw new Error("User not authenticated");
+
+    set((s) => ({
+      loading: { ...s.loading, companies: true },
+      errors: { ...s.errors, companies: null },
+    }));
+
+    try {
+      // Check if user is admin of this company
+      const userAdmin = state.companyAdmins.find(
+        (ca) => ca.company_id === companyId && ca.user_id === state.user?.id,
+      );
+
+      if (!userAdmin) {
+        throw new Error("You don't have permission to delete this company");
+      }
+
+      const { error } = await client
+        .from("companies")
+        .delete()
+        .eq("id", companyId);
+
+      if (error) throw error;
+
+      // Update local state
+      const updatedCompanies = state.companies.filter(
+        (c) => c.id !== companyId,
+      );
+      let updatedCurrentCompany = state.currentCompany;
+
+      if (state.currentCompany?.id === companyId) {
+        updatedCurrentCompany = updatedCompanies[0] || null;
+      }
+
+      set({
+        companies: updatedCompanies,
+        currentCompany: updatedCurrentCompany,
+      });
+
+      return { success: true };
+    } catch (err) {
+      console.error("Error deleting company:", err);
       throw err;
     } finally {
       set((s) => ({ loading: { ...s.loading, companies: false } }));

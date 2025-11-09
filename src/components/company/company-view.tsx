@@ -27,6 +27,7 @@ import {
   Rows3,
   Plus,
   Edit,
+  Trash2,
   MapPin,
   Users,
   Calendar,
@@ -37,6 +38,17 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import type { Company } from "@/types/company";
 import CompanyForm from "@/components/company/company-form-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 type ViewMode = "table" | "grid";
 
@@ -74,12 +86,17 @@ export default function CompaniesView() {
     currentCompany,
     refetchCompanies,
     setCurrentCompany,
+    deleteCompany,
     loading,
   } = useAuthStore();
 
+  const { toast } = useToast();
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     refetchCompanies();
@@ -93,6 +110,34 @@ export default function CompaniesView() {
   const handleSuccess = () => {
     setEditingCompany(null);
     setCreateOpen(false);
+  };
+
+  const handleDeleteClick = (company: Company, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCompanyToDelete(company);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!companyToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      await deleteCompany(companyToDelete.id);
+      // Using sonner directly
+      toast.success("Company deleted", {
+        description: `${companyToDelete.name} has been successfully deleted.`,
+      });
+    } catch (error) {
+      console.error("Error deleting company:", error);
+      toast.error("Error", {
+        description: "Failed to delete company. Please try again.",
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setCompanyToDelete(null);
+    }
   };
 
   const isLoading = loading.companies;
@@ -198,7 +243,7 @@ export default function CompaniesView() {
                           <TableHead className="min-w-[100px]">
                             Status
                           </TableHead>
-                          <TableHead className="min-w-[100px] text-right">
+                          <TableHead className="min-w-[120px] text-right">
                             Actions
                           </TableHead>
                         </TableRow>
@@ -308,17 +353,28 @@ export default function CompaniesView() {
                             </TableCell>
 
                             <TableCell className="text-right">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingCompany(company);
-                                }}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingCompany(company);
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => handleDeleteClick(company, e)}
+                                  className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8 p-0"
+                                  disabled={isDeleting}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -462,18 +518,27 @@ export default function CompaniesView() {
                         </p>
                       </div>
 
-                      {/* Action Button */}
-                      <div className="">
+                      {/* Action Buttons */}
+                      <div className="flex gap-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full transition-opacity group-hover:opacity-100"
+                          className="flex-1 transition-opacity group-hover:opacity-100"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingCompany(company);
                           }}
                         >
                           <Edit className="mr-2 h-3 w-3" /> Edit
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-destructive hover:bg-destructive/10 hover:text-destructive transition-opacity group-hover:opacity-100"
+                          onClick={(e) => handleDeleteClick(company, e)}
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
@@ -485,7 +550,7 @@ export default function CompaniesView() {
         </AnimatePresence>
       )}
 
-      {/* Controlled Dialogs - Fixed Props */}
+      {/* Controlled Dialogs */}
       <CompanyForm
         open={createOpen}
         onOpenChange={setCreateOpen}
@@ -500,6 +565,36 @@ export default function CompaniesView() {
         }}
         onSuccess={handleSuccess}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete{" "}
+              <strong>{companyToDelete?.name}</strong> and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Company"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
