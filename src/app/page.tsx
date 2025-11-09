@@ -64,7 +64,7 @@ export default function LoginPage() {
 
       await refetchCompanies();
 
-      router.push("/dashboard");
+      router.push("/dashboard/companies");
     } catch (error) {
       console.error("Login error:", error);
       alert(error instanceof Error ? error.message : "Login failed");

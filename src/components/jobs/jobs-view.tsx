@@ -31,7 +31,6 @@ import {
   DollarSign,
   Users,
   Clock,
-  RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Job } from "@/types/jobs";
@@ -102,19 +101,13 @@ export default function JobsView() {
 
   useEffect(() => {
     if (currentCompany?.id) {
-      console.log("Refetching jobs for company:", currentCompany.id);
       refetchJobs();
     }
-  }, [currentCompany?.id]);
+  }, [currentCompany?.id, refetchJobs]);
 
   const handleSuccess = () => {
-    console.log("Job form success - closing dialogs");
     setEditingJob(null);
     setCreateOpen(false);
-  };
-
-  const handleRefresh = () => {
-    console.log("Manual refresh triggered");
     refetchJobs();
   };
 
@@ -137,7 +130,7 @@ export default function JobsView() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
@@ -177,18 +170,6 @@ export default function JobsView() {
           </div>
 
           <Button
-            onClick={handleRefresh}
-            variant="outline"
-            size="sm"
-            className="h-9"
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
-            />
-          </Button>
-
-          <Button
             onClick={() => setCreateOpen(true)}
             className="h-10 gap-2"
             disabled={!currentCompany}
@@ -198,84 +179,6 @@ export default function JobsView() {
           </Button>
         </div>
       </div>
-
-      {/* Stats Summary */}
-      {jobs.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/20 dark:to-blue-900/20">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
-                  <Briefcase className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm font-medium">
-                    Total Jobs
-                  </p>
-                  <p className="text-2xl font-bold">{jobs.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/20 dark:to-green-900/20">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
-                  <Users className="h-6 w-6 text-green-600 dark:text-green-400" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm font-medium">
-                    Active Jobs
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {jobs.filter((j) => j.status === "active").length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/20 dark:to-purple-900/20">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/30">
-                  <Clock className="h-6 w-6 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm font-medium">
-                    Draft Jobs
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {jobs.filter((j) => j.status === "draft").length}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/20 dark:to-orange-900/20">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/30">
-                  <DollarSign className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-sm font-medium">
-                    Applications
-                  </p>
-                  <p className="text-2xl font-bold">
-                    {jobs.reduce(
-                      (sum, job) => sum + (job.applications_count || 0),
-                      0,
-                    )}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
 
       {/* Content */}
       {isLoading ? (
@@ -318,7 +221,7 @@ export default function JobsView() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="bg-background sticky left-0 z-10 w-[300px] min-w-[300px] border-r">
+                          <TableHead className="bg-background left-0 z-10 w-[300px] min-w-[300px] border-r md:sticky">
                             Job Title
                           </TableHead>
                           <TableHead className="min-w-[120px]">Type</TableHead>
@@ -352,7 +255,7 @@ export default function JobsView() {
                             className="hover:bg-muted/50 cursor-pointer transition-colors"
                           >
                             {/* Fixed First Column */}
-                            <TableCell className="bg-background sticky left-0 z-10 border-r font-medium">
+                            <TableCell className="bg-background left-0 z-10 border-r font-medium md:sticky">
                               <div className="flex flex-col gap-1">
                                 <p className="font-semibold">{job.title}</p>
                                 <p className="text-muted-foreground line-clamp-2 text-sm">

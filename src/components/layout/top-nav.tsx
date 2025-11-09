@@ -20,6 +20,8 @@ export default function TopNavbar() {
   const currentCompany = useAuthStore((state) => state.currentCompany);
   const refetchCompanies = useAuthStore((state) => state.refetchCompanies);
   const logout = useAuthStore((state) => state.logout);
+  const isSidebarOpen = useAuthStore((state) => state.isSidebarOpen);
+
 
   useEffect(() => {
     if (!currentCompany) {

@@ -98,7 +98,7 @@ export default function CompaniesView() {
   const isLoading = loading.companies;
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-2">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
@@ -179,7 +179,7 @@ export default function CompaniesView() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="bg-background sticky left-0 z-10 w-[300px] min-w-[300px] border-r">
+                          <TableHead className="bg-background left-0 z-10 w-[300px] min-w-[300px] border-r md:sticky">
                             Company
                           </TableHead>
                           <TableHead className="min-w-[150px]">
@@ -215,7 +215,7 @@ export default function CompaniesView() {
                             onClick={() => handleCompanySelect(company.id)}
                           >
                             {/* Fixed First Column */}
-                            <TableCell className="bg-background sticky left-0 z-10 border-r font-medium">
+                            <TableCell className="bg-background left-0 z-10 border-r font-medium md:sticky">
                               <div className="flex items-center gap-3">
                                 <Avatar className="h-10 w-10 border">
                                   <AvatarImage src={company.logo_url || ""} />

@@ -90,7 +90,7 @@ export default function AuthCallback() {
         // Safe assignment - both sides are properly typed
         setProfile(existingProfile ?? fallbackProfile);
 
-        router.push("/dashboard");
+        router.push("/dashboard/companies");
       } catch (err: unknown) {
         const message =
           err instanceof Error ? err.message : "Authentication failed";

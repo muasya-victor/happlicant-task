@@ -1,7 +1,8 @@
+// company-slice.ts
 import type { StateCreator } from "zustand";
 import type { AuthState } from "../auth-store";
 import type { Company } from "@/types/company";
-import type { CompanyAdmin, Agent, AppError } from "@/types/user";
+import type { CompanyAdmin, Agent } from "@/types/user";
 import client from "@/api/client";
 
 export interface CompanySlice {
@@ -19,10 +20,12 @@ export interface CompanySlice {
   createCompany: (companyData: Partial<Company>) => Promise<Company>;
 }
 
-export const createCompanySlice: StateCreator<AuthState, [], [], CompanySlice> = (
-  set,
-  get,
-) => ({
+export const createCompanySlice: StateCreator<
+  AuthState,
+  [],
+  [],
+  CompanySlice
+> = (set, get) => ({
   companies: [],
   companyAdmins: [],
   agents: [],
@@ -57,20 +60,24 @@ export const createCompanySlice: StateCreator<AuthState, [], [], CompanySlice> =
     }));
 
     try {
-      const { data: userCompanies, error: userError } = await client
+      // Fetch the user's company_admin entries
+      const { data: userAdmins, error: userError } = await client
         .from("company_admins")
-        .select("company_id")
+        .select("*")
         .eq("user_id", state.user.id);
 
       if (userError) throw userError;
 
-      const companyIds = userCompanies?.map((uc) => uc.company_id) || [];
+      set({ companyAdmins: userAdmins || [] });
+
+      const companyIds = userAdmins?.map((uc) => uc.company_id) || [];
 
       if (companyIds.length === 0) {
         set({ companies: [], currentCompany: null });
         return;
       }
 
+      // Fetch companies
       const { data, error } = await client
         .from("companies")
         .select("*")
@@ -87,7 +94,7 @@ export const createCompanySlice: StateCreator<AuthState, [], [], CompanySlice> =
       }
     } catch (err) {
       console.error("Error fetching companies:", err);
-      set({ companies: [], currentCompany: null });
+      set({ companies: [], currentCompany: null, companyAdmins: [] });
     } finally {
       set((s) => ({ loading: { ...s.loading, companies: false } }));
     }

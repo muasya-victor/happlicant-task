@@ -265,3 +265,84 @@ EXCEPTION
     RAISE;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION create_job_transaction(
+  p_user_id UUID,
+  p_company_id UUID,
+  p_title TEXT,
+  p_description TEXT DEFAULT NULL,
+  p_requirements TEXT DEFAULT NULL,
+  p_location_type TEXT DEFAULT 'remote',
+  p_location JSONB DEFAULT NULL,
+  p_employment_type TEXT DEFAULT 'full_time',
+  p_salary_range JSONB DEFAULT NULL,
+  p_experience_level TEXT DEFAULT 'mid',
+  p_skills_required TEXT[] DEFAULT NULL,
+  p_status TEXT DEFAULT 'draft',
+  p_application_deadline TIMESTAMP WITH TIME ZONE DEFAULT NULL,
+  p_application_url TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  new_job_id UUID;
+  result JSONB;
+  is_admin BOOLEAN;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM company_admins 
+    WHERE user_id = p_user_id AND company_id = p_company_id
+  ) INTO is_admin;
+
+  IF NOT is_admin THEN
+    RAISE EXCEPTION 'User is not an admin of this company';
+  END IF;
+
+  -- Create job
+  INSERT INTO jobs (
+    company_id,
+    created_by,
+    title,
+    description,
+    requirements,
+    location_type,
+    location,
+    employment_type,
+    salary_range,
+    experience_level,
+    skills_required,
+    status,
+    application_deadline,
+    application_url
+  ) VALUES (
+    p_company_id,
+    p_user_id,
+    p_title,
+    p_description,
+    p_requirements,
+    p_location_type,
+    p_location,
+    p_employment_type,
+    p_salary_range,
+    p_experience_level,
+    p_skills_required,
+    p_status,
+    p_application_deadline,
+    p_application_url
+  )
+  RETURNING id INTO new_job_id;
+
+  SELECT to_jsonb(jobs) INTO result
+  FROM jobs 
+  WHERE id = new_job_id;
+
+  RETURN result;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE LOG 'Error in create_job_transaction: %', SQLERRM;
+    RAISE;
+END;
+$$;

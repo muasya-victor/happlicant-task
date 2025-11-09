@@ -13,8 +13,11 @@ export const createMenuSlice: StateCreator<AuthState, [], [], MenuSlice> = (
 ) => ({
   isSidebarOpen: false,
 
-  toggleSidebar: () =>
-    set((state:any) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  toggleSidebar: () => {
+
+    set((state: any) => ({ isSidebarOpen: !state.isSidebarOpen }));
+
+  },
   openSidebar: () => set({ isSidebarOpen: true }),
   closeSidebar: () => set({ isSidebarOpen: false }),
 });

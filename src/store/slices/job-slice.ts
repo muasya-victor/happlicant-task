@@ -1,3 +1,4 @@
+// job-slice.ts
 import type { StateCreator } from "zustand";
 import type { AuthState } from "../auth-store";
 import type { Job } from "@/types/jobs";
@@ -30,13 +31,33 @@ export const createJobSlice: StateCreator<AuthState, [], [], JobSlice> = (
 
   refetchJobs: async () => {
     const state = get();
-    if (!state.user?.id || !state.currentCompany?.id) return;
+    console.log(
+      "refetchJobs called - Company:",
+      state.currentCompany?.id,
+      "User:",
+      state.user?.id,
+    );
 
-    const isAdminOfCurrent = state.companyAdmins.some(
-      (a) => a.company_id === state.currentCompany?.id,
+    if (!state.user?.id || !state.currentCompany?.id) {
+      console.log("refetchJobs: Missing user or company");
+      set({ jobs: [] });
+      return;
+    }
+
+    // Ensure companyAdmins is loaded
+    if (!state.companyAdmins || state.companyAdmins.length === 0) {
+      console.log("refetchJobs: companyAdmins not loaded, fetching now...");
+      await get().refetchCompanies();
+    }
+
+    const updatedState = get();
+
+    const isAdminOfCurrent = updatedState.companyAdmins.some(
+      (a) => a.company_id === updatedState.currentCompany?.id,
     );
 
     if (!isAdminOfCurrent) {
+      console.log("refetchJobs: User is not admin of current company");
       set({ jobs: [] });
       return;
     }
@@ -47,14 +68,19 @@ export const createJobSlice: StateCreator<AuthState, [], [], JobSlice> = (
     }));
 
     try {
+      console.log(
+        "refetchJobs: Fetching from database for company:",
+        updatedState.currentCompany.id,
+      );
       const { data, error } = await client
         .from("jobs")
         .select("*")
-        .eq("company_id", state.currentCompany.id)
+        .eq("company_id", updatedState.currentCompany.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
+      console.log("refetchJobs: Successfully fetched", data?.length, "jobs");
       set({ jobs: data || [] });
     } catch (err) {
       console.error("Error refetching jobs:", err);
@@ -76,15 +102,22 @@ export const createJobSlice: StateCreator<AuthState, [], [], JobSlice> = (
     }));
 
     try {
-      const { data, error } = await client
-        .from("jobs")
-        .insert({
-          ...jobData,
-          company_id: state.currentCompany.id,
-          created_by: state.user.id,
-        })
-        .select()
-        .single();
+      const { data, error } = await client.rpc("create_job_transaction", {
+        p_user_id: state.user.id,
+        p_company_id: state.currentCompany.id,
+        p_title: jobData.title,
+        p_description: jobData.description,
+        p_requirements: jobData.requirements,
+        p_location_type: jobData.location_type,
+        p_location: jobData.location || null,
+        p_employment_type: jobData.employment_type,
+        p_salary_range: jobData.salary_range || null,
+        p_experience_level: jobData.experience_level,
+        p_skills_required: jobData.skills_required || null,
+        p_status: jobData.status || "draft",
+        p_application_deadline: jobData.application_deadline || null,
+        p_application_url: jobData.application_url || null,
+      });
 
       if (error) throw error;
 

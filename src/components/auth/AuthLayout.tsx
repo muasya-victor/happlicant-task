@@ -6,7 +6,7 @@ interface AuthLayoutProps {
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
   return (
-    <div className="grid min-h-screen grid-cols-1 md:grid-cols-4">
+    <div className="grid min-h-screen grid-cols-1 bg-white md:grid-cols-4">
       {/* left */}
       <div className="relative col-span-1 hidden bg-[url('/images/login.jpg')] bg-cover bg-center bg-no-repeat md:block">
         <div className="absolute inset-0 bg-black/20"></div>
