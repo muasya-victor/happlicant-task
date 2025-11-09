@@ -22,7 +22,7 @@ export const createAuthSlice: StateCreator<AuthState, [], [], AuthSlice> = (
 ) => ({
   user: null,
   profile: null,
-  jobSeeker: null,
+  jobSeeker: null,  
 
   setUser: (user) => set({ user }),
   setProfile: (profile) => set({ profile }),
