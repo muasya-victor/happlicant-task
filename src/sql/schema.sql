@@ -1,4 +1,3 @@
--- Profiles table (extends Supabase auth.users)
 CREATE TABLE profiles (
   id UUID REFERENCES auth.users(id) PRIMARY KEY,
   email TEXT NOT NULL,
@@ -7,7 +6,6 @@ CREATE TABLE profiles (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Companies table
 CREATE TABLE companies (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
@@ -23,7 +21,6 @@ CREATE TABLE companies (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Company admins junction table (many-to-many)
 CREATE TABLE company_admins (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
@@ -33,7 +30,6 @@ CREATE TABLE company_admins (
   UNIQUE(user_id, company_id)
 );
 
--- Agents table (linked to companies)
 CREATE TABLE agents (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
@@ -42,7 +38,6 @@ CREATE TABLE agents (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Job seekers table
 CREATE TABLE job_seekers (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
@@ -65,25 +60,20 @@ AS $$
 DECLARE
   new_company_id UUID;
 BEGIN
-  -- Wait a bit to ensure user is committed in auth.users
   PERFORM pg_sleep(0.5);
   
-  -- Create profile
   INSERT INTO profiles (id, email, user_type)
   VALUES (user_id, user_email, 'company_admin');
   
-  -- Create company
   INSERT INTO companies (name, description)
   VALUES (company_name, company_description)
   RETURNING id INTO new_company_id;
   
-  -- Link user as company admin
   INSERT INTO company_admins (user_id, company_id, role)
   VALUES (user_id, new_company_id, 'owner');
 END;
 $$;
 
--- Jobs table (linked to companies)
 CREATE TABLE jobs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
@@ -91,23 +81,22 @@ CREATE TABLE jobs (
   description TEXT NOT NULL,
   requirements TEXT NOT NULL,
   location_type TEXT NOT NULL CHECK (location_type IN ('remote', 'on_site', 'hybrid')),
-  location JSONB, -- For on_site/hybrid: {city: '', state: '', country: ''}
+  location JSONB, 
   employment_type TEXT NOT NULL CHECK (employment_type IN ('full_time', 'part_time', 'contract', 'freelance', 'internship')),
-  salary_range JSONB, -- {min: number, max: number, currency: 'USD', period: 'yearly'/'monthly'/'hourly'}
+  salary_range JSONB, 
   experience_level TEXT CHECK (experience_level IN ('entry', 'mid', 'senior', 'executive')),
   skills_required TEXT[],
   status TEXT DEFAULT 'active' CHECK (status IN ('draft', 'active', 'paused', 'closed', 'archived')),
   application_deadline TIMESTAMP WITH TIME ZONE,
-  application_url TEXT, -- External application link (optional)
+  application_url TEXT, 
   views_count INTEGER DEFAULT 0,
   applications_count INTEGER DEFAULT 0,
-  created_by UUID REFERENCES profiles(id), -- Who created the job (admin/agent)
+  created_by UUID REFERENCES profiles(id), 
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  published_at TIMESTAMP WITH TIME ZONE -- When job was made active
+  published_at TIMESTAMP WITH TIME ZONE 
 );
 
--- Job categories table (many-to-many with jobs)
 CREATE TABLE job_categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
@@ -115,7 +104,6 @@ CREATE TABLE job_categories (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Jobs to categories junction table
 CREATE TABLE job_categories_relation (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   job_id UUID REFERENCES jobs(id) ON DELETE CASCADE,
@@ -124,22 +112,20 @@ CREATE TABLE job_categories_relation (
   UNIQUE(job_id, category_id)
 );
 
--- Job applications table
 CREATE TABLE job_applications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   job_id UUID REFERENCES jobs(id) ON DELETE CASCADE,
   job_seeker_id UUID REFERENCES job_seekers(id) ON DELETE CASCADE,
   cover_letter TEXT,
-  resume_url TEXT, -- Snapshot at time of application
+  resume_url TEXT, 
   status TEXT DEFAULT 'applied' CHECK (status IN ('applied', 'reviewed', 'interview', 'rejected', 'accepted')),
   applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   reviewed_at TIMESTAMP WITH TIME ZONE,
-  reviewed_by UUID REFERENCES profiles(id), -- Admin/agent who reviewed
-  notes TEXT, -- Internal notes from company
-  UNIQUE(job_id, job_seeker_id) -- Prevent duplicate applications
+  reviewed_by UUID REFERENCES profiles(id), 
+  notes TEXT, 
+  UNIQUE(job_id, job_seeker_id)
 );
 
--- Indexes for better performance
 CREATE INDEX idx_jobs_company_id ON jobs(company_id);
 CREATE INDEX idx_jobs_status ON jobs(status);
 CREATE INDEX idx_jobs_location_type ON jobs(location_type);
@@ -149,13 +135,11 @@ CREATE INDEX idx_job_applications_job_id ON job_applications(job_id);
 CREATE INDEX idx_job_applications_job_seeker_id ON job_applications(job_seeker_id);
 CREATE INDEX idx_job_applications_status ON job_applications(status);
 
--- RLS Policies (if you're using Row Level Security)
 ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE job_categories_relation ENABLE ROW LEVEL SECURITY;
 
--- Policies for jobs
 CREATE POLICY "Company admins/agents can manage their company jobs" ON jobs
   FOR ALL USING (
     company_id IN (
@@ -168,7 +152,6 @@ CREATE POLICY "Company admins/agents can manage their company jobs" ON jobs
 CREATE POLICY "Anyone can view active jobs" ON jobs
   FOR SELECT USING (status = 'active');
 
--- Policies for job applications
 CREATE POLICY "Job seekers can create their own applications" ON job_applications
   FOR INSERT WITH CHECK (
     job_seeker_id IN (SELECT id FROM job_seekers WHERE user_id = auth.uid())
@@ -193,7 +176,6 @@ CREATE POLICY "Company admins/agents can view applications for their jobs" ON jo
 
 
 
--- Create the corrected function
 CREATE OR REPLACE FUNCTION create_company_transaction(
   p_user_id UUID,
   p_user_email TEXT,
@@ -215,7 +197,6 @@ DECLARE
   new_company_id UUID;
   result JSONB;
 BEGIN
-  -- Create or update user profile
   INSERT INTO profiles (id, email, user_type, updated_at)
   VALUES (p_user_id, p_user_email, 'company_admin', NOW())
   ON CONFLICT (id) DO UPDATE 
@@ -223,8 +204,6 @@ BEGIN
     email = EXCLUDED.email,
     user_type = EXCLUDED.user_type,
     updated_at = EXCLUDED.updated_at;
-
-  -- Create company
   INSERT INTO companies (
     name, 
     description, 
@@ -248,11 +227,9 @@ BEGIN
   )
   RETURNING id INTO new_company_id;
 
-  -- Create company admin relationship
   INSERT INTO company_admins (user_id, company_id, role)
   VALUES (p_user_id, new_company_id, 'owner');
 
-  -- Return the created company - FIXED: use proper table alias
   SELECT to_jsonb(companies) INTO result
   FROM companies 
   WHERE id = new_company_id;

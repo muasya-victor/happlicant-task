@@ -31,10 +31,12 @@ import {
   DollarSign,
   Users,
   Clock,
+  Eye,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Job } from "@/types/jobs";
 import JobForm from "@/components/jobs/job-form-dialog";
+import { useRouter } from "next/navigation";
 
 type ViewMode = "table" | "grid";
 
@@ -98,6 +100,7 @@ export default function JobsView() {
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [editingJob, setEditingJob] = useState<Job | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     if (currentCompany?.id) {
@@ -109,6 +112,11 @@ export default function JobsView() {
     setEditingJob(null);
     setCreateOpen(false);
     refetchJobs();
+  };
+
+  const handleViewDetails = (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    router.push(`/dashboard/jobs/${jobId}`);
   };
 
   const isLoading = loading.jobs;
@@ -258,7 +266,7 @@ export default function JobsView() {
                             <TableCell className="bg-background left-0 z-10 border-r font-medium md:sticky">
                               <div className="flex flex-col gap-1">
                                 <p className="font-semibold">{job.title}</p>
-                                
+
                                 <div className="mt-1 flex items-center gap-2">
                                   <Badge variant="outline" className="text-xs">
                                     {job.employment_type.replace("_", " ")}
@@ -335,17 +343,28 @@ export default function JobsView() {
                             </TableCell>
 
                             <TableCell className="text-right">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingJob(job);
-                                }}
-                                className="h-8 w-8 p-0"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => handleViewDetails(job.id, e)}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingJob(job);
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
