@@ -11,6 +11,7 @@ import type { UISlice } from "./slices/ui-slice";
 import type { MenuSlice } from "./slices/menu-slice";
 import { createMenuSlice } from "./slices/menu-slice";
 
+
 export type AuthState = AuthSlice & CompanySlice & JobSlice & UISlice & MenuSlice;
 
 export const useAuthStore = create<AuthState>()(

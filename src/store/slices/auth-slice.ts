@@ -1,3 +1,4 @@
+// src/store/slices/auth-slice.ts
 import type { StateCreator } from "zustand";
 import type { AuthState } from "../auth-store";
 import type { User } from "@supabase/supabase-js";
@@ -11,10 +12,13 @@ export interface AuthSlice {
   setUser: (user: User | null) => void;
   setProfile: (profile: Profile | null) => void;
   setJobSeeker: (jobSeeker: JobSeeker | null) => void;
+
+  logout: () => void;
 }
 
 export const createAuthSlice: StateCreator<AuthState, [], [], AuthSlice> = (
   set,
+  get,
 ) => ({
   user: null,
   profile: null,
@@ -23,4 +27,14 @@ export const createAuthSlice: StateCreator<AuthState, [], [], AuthSlice> = (
   setUser: (user) => set({ user }),
   setProfile: (profile) => set({ profile }),
   setJobSeeker: (jobSeeker) => set({ jobSeeker }),
+
+  logout: () => {
+    setTimeout(() => localStorage.removeItem("auth-storage"), 0);
+
+    const state = get();
+    state.setUser(null);
+    state.setProfile(null);
+    state.setJobSeeker(null);
+    state.setCurrentCompany?.(null);
+  },
 });
