@@ -258,9 +258,7 @@ export default function JobsView() {
                             <TableCell className="bg-background left-0 z-10 border-r font-medium md:sticky">
                               <div className="flex flex-col gap-1">
                                 <p className="font-semibold">{job.title}</p>
-                                <p className="text-muted-foreground line-clamp-2 text-sm">
-                                  {job.description}
-                                </p>
+                                
                                 <div className="mt-1 flex items-center gap-2">
                                   <Badge variant="outline" className="text-xs">
                                     {job.employment_type.replace("_", " ")}
