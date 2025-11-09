@@ -340,10 +340,10 @@ export default function CompaniesView() {
                 {companies.map((company) => (
                   <div
                     key={company.id}
-                    className={`group flex h-fit cursor-pointer flex-col gap-4 p-2 transition-all duration-200 hover:shadow-lg ${
+                    className={`group flex h-fit cursor-pointer flex-col gap-4 rounded-md p-2 transition-all duration-200 hover:shadow-lg ${
                       currentCompany?.id === company.id
-                        ? "rounded-md border border-gray-200 shadow-none"
-                        : "border-border"
+                        ? "border border-gray-200 shadow-none"
+                        : "border"
                     }`}
                     onClick={() => handleCompanySelect(company.id)}
                   >

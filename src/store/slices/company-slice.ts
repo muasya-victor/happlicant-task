@@ -16,6 +16,7 @@ export interface CompanySlice {
   setCurrentCompany: (company: Company | null) => void;
 
   refetchCompanies: () => Promise<void>;
+  createCompany: (companyData: Partial<Company>) => Promise<Company>;
 }
 
 export const createCompanySlice: StateCreator<AuthState, [], [], CompanySlice> = (
@@ -87,6 +88,48 @@ export const createCompanySlice: StateCreator<AuthState, [], [], CompanySlice> =
     } catch (err) {
       console.error("Error fetching companies:", err);
       set({ companies: [], currentCompany: null });
+    } finally {
+      set((s) => ({ loading: { ...s.loading, companies: false } }));
+    }
+  },
+
+  createCompany: async (companyData: Partial<Company>) => {
+    const state = get();
+    if (!state.user?.id) throw new Error("User not authenticated");
+
+    set((s) => ({
+      loading: { ...s.loading, companies: true },
+      errors: { ...s.errors, companies: null },
+    }));
+
+    try {
+      const dbPayload = {
+        p_user_id: state.user.id,
+        p_user_email: state.user.email,
+        p_company_name: companyData.name,
+        p_company_description: companyData.description ?? null,
+        p_company_website: companyData.website ?? null,
+        p_company_logo_url: companyData.logo_url ?? null,
+        p_company_founded: companyData.founded ?? null,
+        p_company_employee_count: companyData.employee_count ?? null,
+        p_company_ceo: companyData.ceo ?? null,
+        p_company_industry: companyData.industry ?? null,
+        p_company_location: companyData.location ?? null,
+      };
+
+      const { data: newCompany, error } = await client.rpc(
+        "create_company_transaction",
+        dbPayload,
+      );
+
+      if (error) throw error;
+
+      await get().refetchCompanies();
+
+      return newCompany;
+    } catch (err) {
+      console.error("Error creating company:", err);
+      throw err;
     } finally {
       set((s) => ({ loading: { ...s.loading, companies: false } }));
     }

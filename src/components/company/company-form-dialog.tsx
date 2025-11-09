@@ -161,7 +161,6 @@ export default function CompanyForm({
     setLoading("companies", true);
 
     try {
-      // Prepare location object
       const location =
         formData.city || formData.country
           ? {
@@ -170,9 +169,8 @@ export default function CompanyForm({
               ...(formData.zip_code && { zip_code: formData.zip_code }),
               ...(formData.country && { country: formData.country }),
             }
-          : null;
+          : undefined;
 
-      // Prepare industry object
       const industry = formData.industryPrimary
         ? {
             primary: formData.industryPrimary,
@@ -183,59 +181,40 @@ export default function CompanyForm({
                 .filter(Boolean),
             }),
           }
-        : null;
+        : undefined;
 
-      // Prepare CEO object
       const ceo = formData.ceoName
         ? {
             name: formData.ceoName,
             ...(formData.ceoSince && { since: parseInt(formData.ceoSince) }),
             ...(formData.ceoBio && { bio: formData.ceoBio }),
           }
-        : null;
+        : undefined;
+
+      const companyPayload: Partial<Company> = {
+        name: formData.name,
+        description: formData.description || undefined,
+        website: formData.website || undefined,
+        logo_url: formData.logo_url || undefined,
+        founded: formData.founded ? parseInt(formData.founded) : undefined,
+        employee_count: formData.employee_count
+          ? parseInt(formData.employee_count)
+          : undefined,
+        ceo,
+        industry,
+        location,
+      };
 
       if (isEditing && company?.id) {
         const { error } = await client
           .from("companies")
-          .update({
-            name: formData.name,
-            description: formData.description,
-            website: formData.website,
-            logo_url: formData.logo_url,
-            founded: formData.founded ? parseInt(formData.founded) : null,
-            employee_count: formData.employee_count
-              ? parseInt(formData.employee_count)
-              : null,
-            ceo,
-            industry,
-            location,
-          })
+          .update(companyPayload)
           .eq("id", company.id);
 
         if (error) throw error;
       } else {
-        const { error: rpcError } = await client.rpc(
-          "create_company_admin_profile",
-          {
-            user_id: user.id,
-            user_email: user.email,
-            company_name: formData.name,
-            company_description: formData.description,
-            company_website: formData.website,
-            company_logo_url: formData.logo_url,
-            company_founded: formData.founded
-              ? parseInt(formData.founded)
-              : null,
-            company_employee_count: formData.employee_count
-              ? parseInt(formData.employee_count)
-              : null,
-            company_ceo: ceo,
-            company_industry: industry,
-            company_location: location,
-          },
-        );
-
-        if (rpcError) throw rpcError;
+        const { createCompany } = useAuthStore.getState();
+        await createCompany(companyPayload);
       }
 
       await refetchCompanies();
@@ -243,6 +222,7 @@ export default function CompanyForm({
       onSuccess?.();
     } catch (err) {
       console.error("Error saving company:", err);
+      alert("Failed to create company. Please try again.");
     } finally {
       setLoading("companies", false);
     }

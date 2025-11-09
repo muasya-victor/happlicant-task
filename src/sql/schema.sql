@@ -190,3 +190,78 @@ CREATE POLICY "Company admins/agents can view applications for their jobs" ON jo
       )
     )
   );
+
+
+
+-- Create the corrected function
+CREATE OR REPLACE FUNCTION create_company_transaction(
+  p_user_id UUID,
+  p_user_email TEXT,
+  p_company_name TEXT,
+  p_company_description TEXT DEFAULT NULL,
+  p_company_website TEXT DEFAULT NULL,
+  p_company_logo_url TEXT DEFAULT NULL,
+  p_company_founded INTEGER DEFAULT NULL,
+  p_company_employee_count INTEGER DEFAULT NULL,
+  p_company_ceo JSONB DEFAULT NULL,
+  p_company_industry JSONB DEFAULT NULL,
+  p_company_location JSONB DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  new_company_id UUID;
+  result JSONB;
+BEGIN
+  -- Create or update user profile
+  INSERT INTO profiles (id, email, user_type, updated_at)
+  VALUES (p_user_id, p_user_email, 'company_admin', NOW())
+  ON CONFLICT (id) DO UPDATE 
+  SET 
+    email = EXCLUDED.email,
+    user_type = EXCLUDED.user_type,
+    updated_at = EXCLUDED.updated_at;
+
+  -- Create company
+  INSERT INTO companies (
+    name, 
+    description, 
+    website, 
+    logo_url, 
+    founded, 
+    employee_count, 
+    ceo, 
+    industry, 
+    location
+  ) VALUES (
+    p_company_name,
+    p_company_description,
+    p_company_website,
+    p_company_logo_url,
+    p_company_founded,
+    p_company_employee_count,
+    p_company_ceo,
+    p_company_industry,
+    p_company_location
+  )
+  RETURNING id INTO new_company_id;
+
+  -- Create company admin relationship
+  INSERT INTO company_admins (user_id, company_id, role)
+  VALUES (p_user_id, new_company_id, 'owner');
+
+  -- Return the created company - FIXED: use proper table alias
+  SELECT to_jsonb(companies) INTO result
+  FROM companies 
+  WHERE id = new_company_id;
+
+  RETURN result;
+
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE LOG 'Error in create_company_transaction: %', SQLERRM;
+    RAISE;
+END;
+$$;
