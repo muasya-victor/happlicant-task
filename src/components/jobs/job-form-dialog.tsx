@@ -263,13 +263,13 @@ export default function JobForm({
               <div className="flex flex-col gap-2">
                 <Label htmlFor="experience_level">Experience Level</Label>
                 <Select
-                  value={formData.experience_level}
-                  onValueChange={(value: Job["experience_level"]) =>
+                  value={formData.experience_level || ""}
+                  onValueChange={(value: string) =>
                     handleSelectChange("experience_level", value)
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder="Select experience level" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="entry">Entry Level</SelectItem>

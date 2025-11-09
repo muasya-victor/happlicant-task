@@ -7,7 +7,6 @@ import { useAuthStore } from "@/store/auth-store";
 import type { Profile } from "@/types/user";
 import type { Company } from "@/types/company";
 
-// Define proper types for RPC response
 interface RPCResponse {
   error: Error | null;
   data?: unknown;
@@ -29,7 +28,6 @@ export default function AuthCallback() {
       try {
         setLoading("auth", true);
 
-        // Get the session from Supabase
         const sessionResult = await client.auth.getSession();
         if (sessionResult.error) throw sessionResult.error;
 
@@ -37,7 +35,6 @@ export default function AuthCallback() {
         if (!user) throw new Error("No user session found");
         setUser(user);
 
-        // Check if a profile exists with proper typing
         const profileResult = await client
           .from("profiles")
           .select("*")
@@ -51,7 +48,6 @@ export default function AuthCallback() {
 
         const existingProfile: Profile | null = profileResult.data;
 
-        // If no profile exists, create one via RPC
         if (!existingProfile) {
           const companyName =
             user.user_metadata?.full_name ??
@@ -68,7 +64,6 @@ export default function AuthCallback() {
           if (rpcResult.error) throw rpcResult.error;
         }
 
-        // Fetch companies and set current company safely
         await refetchCompanies();
 
         const state = useAuthStore.getState();
@@ -78,7 +73,6 @@ export default function AuthCallback() {
           setCurrentCompany(firstCompany);
         }
 
-        // Create fallback profile that matches Profile type
         const fallbackProfile: Profile = {
           id: user.id,
           email: user.email ?? "",
@@ -87,7 +81,6 @@ export default function AuthCallback() {
           updated_at: new Date().toISOString(),
         };
 
-        // Safe assignment - both sides are properly typed
         setProfile(existingProfile ?? fallbackProfile);
 
         router.push("/dashboard/companies");

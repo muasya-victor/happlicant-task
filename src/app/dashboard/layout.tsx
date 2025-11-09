@@ -22,7 +22,6 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen w-screen bg-gray-50">
-      {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/30 md:hidden"
@@ -30,11 +29,9 @@ export default function DashboardLayout({
         />
       )}
 
-      {/* Main content */}
       <div className="flex min-w-0 flex-1 flex-col">
         <TopNavbar />
         <main className="flex flex-1">
-          {/* Sidebar - Fixed on mobile, static on desktop */}
           <div
             className={`fixed inset-y-0 left-0 z-40 h-full w-56 transform border-none bg-white transition-transform duration-300 ease-in-out ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} md:relative md:translate-x-0 md:transform-none`}
           >

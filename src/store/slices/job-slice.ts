@@ -1,4 +1,3 @@
-// job-slice.ts
 import type { StateCreator } from "zustand";
 import type { AuthState } from "../auth-store";
 import type { Job } from "@/types/jobs";
@@ -44,16 +43,22 @@ export const createJobSlice: StateCreator<AuthState, [], [], JobSlice> = (
       return;
     }
 
-    // Ensure companyAdmins is loaded
     if (!state.companyAdmins || state.companyAdmins.length === 0) {
       console.log("refetchJobs: companyAdmins not loaded, fetching now...");
       await get().refetchCompanies();
     }
 
     const updatedState = get();
+    const currentCompany = updatedState.currentCompany;
+
+    if (!currentCompany) {
+      console.log("refetchJobs: currentCompany is null after refetch");
+      set({ jobs: [] });
+      return;
+    }
 
     const isAdminOfCurrent = updatedState.companyAdmins.some(
-      (a) => a.company_id === updatedState.currentCompany?.id,
+      (a) => a.company_id === currentCompany.id,
     );
 
     if (!isAdminOfCurrent) {
@@ -68,14 +73,10 @@ export const createJobSlice: StateCreator<AuthState, [], [], JobSlice> = (
     }));
 
     try {
-      console.log(
-        "refetchJobs: Fetching from database for company:",
-        updatedState.currentCompany.id,
-      );
       const { data, error } = await client
         .from("jobs")
         .select("*")
-        .eq("company_id", updatedState.currentCompany.id)
+        .eq("company_id", currentCompany.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
