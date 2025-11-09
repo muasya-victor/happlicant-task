@@ -1,173 +1,126 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import client from "@/api/client";
+import { useAuthStore } from "@/store/auth-store";
+import type { Profile } from "@/types/user";
+import type { Company } from "@/types/company";
+
+// Define proper types for RPC response
+interface RPCResponse {
+  error: Error | null;
+  data?: unknown;
+}
 
 export default function AuthCallback() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    setUser,
+    setProfile,
+    refetchCompanies,
+    setCurrentCompany,
+    setLoading,
+    setError,
+  } = useAuthStore();
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log("Auth callback started");
+        setLoading("auth", true);
 
-        const hash = window.location.hash;
-        if (hash) {
-          const { data, error } = await client.auth.getSession();
-          if (error) throw error;
-        }
+        // Get the session from Supabase
+        const sessionResult = await client.auth.getSession();
+        if (sessionResult.error) throw sessionResult.error;
 
-        const {
-          data: { session },
-          error: sessionError,
-        } = await client.auth.getSession();
+        const user = sessionResult.data.session?.user ?? null;
+        if (!user) throw new Error("No user session found");
+        setUser(user);
 
-        if (sessionError) {
-          console.error("Session error:", sessionError);
-          throw sessionError;
-        }
-
-        console.log("Session:", session);
-
-        if (!session?.user) {
-          throw new Error("No user session found");
-        }
-
-        const user = session.user;
-        console.log("User:", user);
-
-        const { data: existingProfile, error: profileCheckError } = await client
+        // Check if a profile exists with proper typing
+        const profileResult = await client
           .from("profiles")
           .select("*")
           .eq("id", user.id)
-          .maybeSingle(); 
+          .maybeSingle();
 
-        if (profileCheckError) {
-          console.error("Profile check error:", profileCheckError);
-          throw profileCheckError;
+        if (profileResult.error) {
+          console.error("Profile fetch error:", profileResult.error);
+          throw new Error("Failed to fetch user profile");
         }
 
-        console.log("Existing profile:", existingProfile);
+        const existingProfile: Profile | null = profileResult.data;
 
+        // If no profile exists, create one via RPC
         if (!existingProfile) {
-          console.log("Creating new profile and company...");
+          const companyName =
+            user.user_metadata?.full_name ??
+            user.email?.split("@")[0] ??
+            "New Company";
 
-          const companyName = user.user_metadata.full_name
-            ? `${user.user_metadata.full_name}'s Company`
-            : `${user.email?.split("@")[0]}'s Company`;
+          const rpcResult = (await client.rpc("create_company_admin_profile", {
+            user_id: user.id,
+            user_email: user.email ?? "",
+            company_name: companyName,
+            company_description: "Company created via Google sign-up",
+          })) as RPCResponse;
 
-          const { data: newCompany, error: companyError } = await client
-            .from("companies")
-            .insert({
-              name: companyName,
-              description: "Company created via Google sign-up",
-            })
-            .select()
-            .single();
-
-          if (companyError) {
-            console.error("Company creation error:", companyError);
-            throw companyError;
-          }
-
-          console.log("Company created:", newCompany);
-
-          const { error: profileError } = await client.from("profiles").insert({
-            id: user.id,
-            email: user.email!,
-            user_type: "company_admin",
-          });
-
-          if (profileError) {
-            console.error("Profile creation error:", profileError);
-
-            await client.from("companies").delete().eq("id", newCompany.id);
-            throw profileError;
-          }
-
-          console.log("Profile created");
-
-          const { error: adminError } = await client
-            .from("company_admins")
-            .insert({
-              user_id: user.id,
-              company_id: newCompany.id,
-              role: "owner",
-            });
-
-          if (adminError) {
-            console.error("Admin link error:", adminError);
-            throw adminError;
-          }
-
-          console.log("Admin link created");
-        } else {
-          console.log("Profile already exists, skipping creation");
+          if (rpcResult.error) throw rpcResult.error;
         }
 
-        console.log("Redirecting to dashboard...");
-        router.push("/dashboard");
-      } catch (error) {
-        console.error("Auth callback error:", error);
-        const errorMessage =
-          error instanceof Error ? error.message : "Authentication failed";
-        setError(errorMessage);
+        // Fetch companies and set current company safely
+        await refetchCompanies();
 
-        setTimeout(() => {
-          router.push(`/login?error=${encodeURIComponent(errorMessage)}`);
-        }, 3000);
+        const state = useAuthStore.getState();
+        const firstCompany: Company | null = state.companies[0] ?? null;
+
+        if (!state.currentCompany && firstCompany) {
+          setCurrentCompany(firstCompany);
+        }
+
+        // Create fallback profile that matches Profile type
+        const fallbackProfile: Profile = {
+          id: user.id,
+          email: user.email ?? "",
+          user_type: "company_admin",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        // Safe assignment - both sides are properly typed
+        setProfile(existingProfile ?? fallbackProfile);
+
+        router.push("/dashboard");
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : "Authentication failed";
+        console.error("Auth callback error:", message);
+
+        setError("auth", {
+          message,
+          code: "AUTH_CALLBACK_ERROR",
+          timestamp: Date.now(),
+        });
+
+        setTimeout(
+          () => router.push(`/login?error=${encodeURIComponent(message)}`),
+          3000,
+        );
       } finally {
-        setLoading(false);
+        setLoading("auth", false);
       }
     };
 
-    handleAuthCallback();
-  }, [router]);
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
-          <h2 className="text-xl font-semibold">Completing sign up...</h2>
-          <p className="text-muted-foreground mt-2">
-            Please wait while we set up your account.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="max-w-md text-center">
-          <h2 className="mb-4 text-xl font-semibold text-red-600">
-            Authentication Error
-          </h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <div className="space-y-2">
-            <button
-              onClick={() => router.push("/register")}
-              className="w-full rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-            >
-              Back to Registration
-            </button>
-            <button
-              onClick={() => router.push("/login")}
-              className="w-full rounded border border-gray-300 px-4 py-2 hover:bg-gray-50"
-            >
-              Go to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    void handleAuthCallback();
+  }, [
+    router,
+    setUser,
+    setProfile,
+    refetchCompanies,
+    setCurrentCompany,
+    setLoading,
+    setError,
+  ]);
 
   return null;
 }

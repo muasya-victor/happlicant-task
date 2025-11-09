@@ -1,75 +1,92 @@
 "use client";
 
-import { useCompany } from "@/context/CompanyContext";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronDown } from "lucide-react";
+import { useAuthStore } from "@/store/auth-store";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Building } from "lucide-react";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { Company } from "@/types/company";
 
-export const CompanySwitcherSkeleton = () => (
-  <div className="w-[240px]">
-    <Skeleton className="h-10 w-full" />
-  </div>
-);
+export default function CompanySwitcher() {
+  const router = useRouter();
+  const {
+    user,
+    companies,
+    currentCompany,
+    setCurrentCompany,
+    refetchCompanies,
+    loading,
+  } = useAuthStore();
 
-const CompanySwitcher = () => {
-  const { companies, currentCompany, setCurrentCompany, loading, error } =
-    useCompany();
+  const [open, setOpen] = useState(false);
 
-  if (loading) {
-    return <CompanySwitcherSkeleton />;
-  }
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      if (open && user) {
+        await refetchCompanies();
 
-  if (error) {
-    return (
-      <Alert variant="destructive" className="w-[240px]">
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Failed to load companies</AlertDescription>
-      </Alert>
-    );
-  }
+        if (!currentCompany && companies.length > 0) {
+          setCurrentCompany(companies[0] ?? null);
+        }
+      }
+    };
 
-  if (companies.length === 0) {
-    return (
-      <div className="text-muted-foreground flex w-[240px] items-center gap-2 px-3 py-2 text-sm">
-        <Building className="h-4 w-4" />
-        No companies
-      </div>
-    );
-  }
+    void fetchCompanies();
+  }, [
+    open,
+    user,
+    refetchCompanies,
+    currentCompany,
+    setCurrentCompany,
+    companies.length,
+  ]);
+
+  const handleSelect = (companyId: string) => {
+    const selected = companies.find((c: Company) => c.id === companyId);
+    if (selected) setCurrentCompany(selected);
+    setOpen(false);
+  };
 
   return (
-    <Select
-      value={currentCompany?.id || ""}
-      onValueChange={(value) => {
-        const selected = companies.find((c) => c.id === value);
-        if (selected) {
-          setCurrentCompany(selected);
-        }
-      }}
-    >
-      <SelectTrigger className="w-[240px]">
-        <SelectValue placeholder="Select a company" />
-      </SelectTrigger>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger className="inline-flex w-full items-center justify-between rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-none hover:bg-gray-50">
+        {currentCompany ? currentCompany.name : "Select Company"}
+        <ChevronDown className="ml-2 h-4 w-4" />
+      </DropdownMenuTrigger>
 
-      <SelectContent>
-        {companies.map((company) => (
-          <SelectItem key={company.id} value={company.id}>
-            <div className="flex items-center gap-2">
-              <Building className="h-4 w-4" />
+      <DropdownMenuContent className="w-56">
+        {loading.companies && (
+          <DropdownMenuItem className="cursor-default text-gray-500">
+            Loading...
+          </DropdownMenuItem>
+        )}
+
+        {!loading.companies && companies.length === 0 && (
+          <DropdownMenuItem className="cursor-default text-gray-500">
+            No companies available
+          </DropdownMenuItem>
+        )}
+
+        {!loading.companies &&
+          companies.map((company: Company) => (
+            <DropdownMenuItem
+              key={company.id}
+              onClick={() => handleSelect(company.id)}
+              className={`${
+                currentCompany?.id === company.id
+                  ? "bg-gray-500 text-white"
+                  : ""
+              }`}
+            >
               {company.name}
-            </div>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+            </DropdownMenuItem>
+          ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
-};
-
-export default CompanySwitcher;
+}

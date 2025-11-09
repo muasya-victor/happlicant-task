@@ -2,7 +2,6 @@ import "@/styles/globals.css";
 
 import { type Metadata } from "next";
 import { Geist } from "next/font/google";
-import { CompanyProvider } from "@/context/CompanyContext";
 
 export const metadata: Metadata = {
   title: "Happlicant Task",
@@ -21,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable}`}>
       <body>
-        <CompanyProvider>{children}</CompanyProvider>
+        {children}
       </body>
     </html>
   );

@@ -13,22 +13,18 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import client from "@/api/client";
+import { useAuthStore } from "@/store/auth-store";
 import AuthLayout from "@/components/auth/AuthLayout";
-import { useJobs } from "@/hooks/useJobs";
-import { log } from "console";
+import type { Profile } from "@/types/user";
 
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const {jobs, isLoading: jobsLoading} = useJobs()
   const [googleLoading, setGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
-
-  console.log("Component state:", { jobs, jobsLoading });
-
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -42,12 +38,32 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const { error } = await client.auth.signInWithPassword({
+      const { data, error } = await client.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       });
 
       if (error) throw error;
+      if (!data.user) throw new Error("No user data returned");
+
+      const { setUser, setProfile, refetchCompanies } = useAuthStore.getState();
+
+      setUser(data.user);
+
+      // Fix: Properly type the profile response
+      const profileResponse = await client
+        .from("profiles")
+        .select("*")
+        .eq("id", data.user.id)
+        .single();
+
+      if (profileResponse.error) {
+        console.error("Profile fetch error:", profileResponse.error);
+      } else {
+        setProfile(profileResponse.data as Profile);
+      }
+
+      await refetchCompanies();
 
       router.push("/dashboard");
     } catch (error) {
@@ -146,7 +162,7 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-4 text-center text-sm">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Button
               variant="link"
               className="p-0"

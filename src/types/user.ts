@@ -38,3 +38,11 @@ export interface AppError {
   code?: string;
   timestamp: number;
 }
+
+export interface Profile {
+  id: string;
+  email: string;
+  user_type: UserType;
+  created_at: string;
+  updated_at: string;
+}
